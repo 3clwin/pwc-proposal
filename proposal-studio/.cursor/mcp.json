@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@anthropic-ai/playwright-mcp@latest"],
+      "env": {}
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["@anthropic-ai/chrome-devtools-mcp@latest"],
+      "env": {}
+    }
+  }
+}

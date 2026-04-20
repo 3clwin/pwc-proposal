@@ -1,0 +1,36 @@
+---
+description: Design system compliance — fires on component and app source files
+alwaysApply: false
+globs:
+  - proposal-studio/src/components/**/*.tsx
+  - proposal-studio/src/components/**/*.ts
+  - proposal-studio/src/app/**/*.tsx
+  - proposal-studio/src/app/**/*.ts
+---
+
+# Design System Compliance
+
+These rules apply when editing UI components or app pages.
+
+## Stack
+
+- **Framework:** Next.js (App Router) + TypeScript
+- **UI Library:** shadcn/ui (preset: b1aIcEdHO)
+- **Styling:** Tailwind CSS
+- **Animation:** Framer Motion
+- **Icons:** Lucide React
+- **Fonts:** Inter (app chrome), JetBrains Mono (code/tokens)
+
+## Rules
+
+1. Prefer shadcn/ui components before hand-rolling markup. Check `.cursor/skills/shadcn-ui/SKILL.md` for the component decision flow.
+2. Prefer design tokens before ad-hoc values — use CSS variables (`var(--primary)`, `var(--muted)`, etc.), not raw hex.
+3. Use `cn()` from `@/lib/utils` for composed class logic.
+4. Do not introduce visual drift when the design system already covers the case.
+5. All spacing on the 4px grid: 4/8/12/16/24/32/48/64px mapping to Tailwind gap-1 through gap-16.
+6. Border radius: buttons 6px (rounded-md), cards 8px (rounded-lg), modals 12px (rounded-xl), pills (rounded-full).
+7. WCAG 2.2 AA contrast and keyboard navigation — not optional, not "will add later".
+8. App chrome palette: background #FAFAF8, surface #FFFFFF, text #1A1A1A, accent #2563EB, border #E5E5E3.
+9. Use semantic Tailwind tokens (`bg-primary`, `text-muted-foreground`) over raw colors (`bg-blue-500`).
+10. Use `next/font` for font loading. Never import from Google Fonts CDN directly.
+11. Use `next/image` for all images with proper width/height or fill props.

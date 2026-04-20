@@ -1,0 +1,261 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --font-display: var(--font-template-display);
+  --font-template-sans: var(--font-template-sans);
+  --font-template-display: var(--font-template-display);
+  /* App-chrome font — never overridden by <ProposalCanvas>. Use inside a
+   * canvas when a label is app UI (not client content) and needs to stay
+   * in Proposal Studio's own typography. */
+  --font-app: var(--font-app-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-disabled: var(--primary-disabled);
+  --color-primary-disabled-foreground: var(--primary-disabled-foreground);
+  /* App-chrome primary — never overridden by <ProposalCanvas>. Use on app
+   * UI chrome (selection rings, step indicators, app-level CTAs) that
+   * lives inside a canvas but needs to stay in Proposal Studio's color. */
+  --color-app-primary: var(--app-primary);
+  --color-app-primary-foreground: var(--app-primary-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
+}
+
+:root {
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #FFAA72;
+  --primary-foreground: #1A1A1A;
+  --primary-hover: #FE7C39;
+  --primary-pressed: #FFAA72;
+  --primary-disabled: #DFE3E6;
+  --primary-disabled-foreground: #8E95A2;
+  /* App-chrome primary — fixed to Proposal Studio's orange, never
+   * overridden by <ProposalCanvas>. Use for app UI elements (selection
+   * rings, step indicators) that sit inside a client canvas. */
+  --app-primary: #FFAA72;
+  --app-primary-foreground: #1A1A1A;
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --radius: 0.25rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.546 0.245 262.881);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-app-sans: Arial, Helvetica, sans-serif;
+  --font-template-sans: Arial, Helvetica, sans-serif;
+  --font-template-display: Georgia, "Times New Roman", Times, serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ───────── Animations ───────── */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/* Shimmer sweep — used by the editor's CoverShimmer while the site
+ * is being generated. Runs as a CSS animation (not framer-motion)
+ * so the loop keeps sweeping continuously during AnimatePresence
+ * exit transitions, which would otherwise freeze motion.div
+ * animations mid-cycle. */
+@keyframes cover-shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* ───────── Template container-query responsive rules ─────────
+ * Templates are rendered inside an editor viewport narrower than the
+ * browser window. Tailwind's sm:/md:/lg: fire on window width which
+ * doesn't match what the template actually sees, so we layer container
+ * queries on top for the most visible layout elements.
+ */
+.tpl-root {
+  container-type: inline-size;
+}
+
+/* Hide huge display sizes when container is narrow */
+@container (max-width: 900px) {
+  .tpl-root h1 {
+    font-size: clamp(2rem, 6cqw, 3.75rem) !important;
+    line-height: 1.05 !important;
+  }
+  .tpl-root h2 {
+    font-size: clamp(1.5rem, 4.5cqw, 3rem) !important;
+    line-height: 1.12 !important;
+  }
+}
+
+@container (max-width: 680px) {
+  .tpl-root section,
+  .tpl-root header {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .tpl-root section {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+  .tpl-root .grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@container (max-width: 520px) {
+  .tpl-root h1 {
+    font-size: clamp(1.5rem, 8cqw, 2.25rem) !important;
+  }
+  .tpl-root h2 {
+    font-size: clamp(1.25rem, 6cqw, 1.875rem) !important;
+  }
+  .tpl-root section {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.424 0.199 265.638);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.623 0.214 259.815);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Radix ScrollArea compatibility fix.
+ *
+ * Radix wraps viewport children in an internal `display: table` div so it
+ * can measure content width. That table formatting context breaks
+ * `position: sticky` for any descendant — the sticky element never pins,
+ * and wheel-event propagation inside the viewport also becomes unreliable
+ * in some Chromium versions.
+ *
+ * The editor preview's proposal nav depends on sticky positioning. Force
+ * the internal wrapper back to normal block flow so sticky works and wheel
+ * scrolling is honored.
+ *
+ * See: https://github.com/radix-ui/primitives/issues/2722
+ */
+[data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+  min-width: 0 !important;
+}

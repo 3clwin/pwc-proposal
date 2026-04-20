@@ -1,0 +1,279 @@
+{
+  // ============================================================
+  // PROPOSAL STUDIO — Cursor AI Configuration
+  // PwC CSX AI Hackathon | Track 2: AI-Enabled Client Delivery
+  // ============================================================
+
+  "project": {
+    "name": "Proposal Studio",
+    "description": "AI-powered RFP response generator that builds brand-aware proposal microsites. Upload docs + client URL → extract brand → generate site → edit inline → deploy to Vercel.",
+    "type": "fullstack-web-app",
+    "deadline": "2026-04-20"
+  },
+
+  // ============================================================
+  // TECH STACK
+  // ============================================================
+
+  "stack": {
+    "framework": "Next.js 14 (App Router)",
+    "language": "TypeScript (strict mode)",
+    "runtime": "Node.js 20+",
+    "packageManager": "pnpm",
+    "ui": "shadcn/ui (preset: b1VlIwYS)",
+    "styling": "Tailwind CSS",
+    "fonts": "Inter (next/font) for app chrome, JetBrains Mono for code/tokens",
+    "ai": {
+      "architecture": "Multi-LLM — unified client (src/lib/llm/) routes to user's selected provider",
+      "providers": {
+        "anthropic": { "sdk": "@anthropic-ai/sdk", "models": ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] },
+        "google": { "sdk": "@google/generative-ai", "models": ["gemini-2.5-pro", "gemini-2.5-flash"] },
+        "openai": { "sdk": "openai", "models": ["gpt-4o", "gpt-4o-mini"] }
+      },
+      "keyManagement": "User-managed via Settings page → localStorage → passed to API routes via request headers"
+    },
+    "scraping": "Playwright MCP + Chrome MCP",
+    "deployment": "Vercel (app) + Vercel API (generated sites)",
+    "documentParsing": ["pdf-parse", "mammoth", "xlsx/SheetJS"],
+    "richTextEditing": "Tiptap or contentEditable",
+    "dragAndDrop": "@dnd-kit/core",
+    "codeViewer": "Monaco Editor (read-only)"
+  },
+
+  // ============================================================
+  // MCP SERVERS
+  // ============================================================
+
+  "mcpServers": {
+    "playwright": {
+      "package": "@anthropic/playwright-mcp",
+      "purpose": "Autonomous brand extraction — crawl client websites, extract CSS, screenshot pages, pull logos and images",
+      "usage": "Used in /api/extract-brand route to scrape client sites"
+    },
+    "chrome": {
+      "purpose": "Browser automation fallback for sites that block headless Playwright",
+      "usage": "Secondary scraping method if Playwright fails"
+    },
+    "shadcn": {
+      "purpose": "Component library with preset b1VlIwYS",
+      "setup": "npx shadcn@latest init --preset b1VlIwYS",
+      "usage": "All UI components throughout the app"
+    }
+  },
+
+  // ============================================================
+  // CODING RULES
+  // ============================================================
+
+  "rules": [
+    // === GENERAL ===
+    "Use TypeScript strict mode for all files. No 'any' types — define interfaces in src/types/index.ts.",
+    "Use named exports for components, default exports only for Next.js pages.",
+    "Use 'use client' directive only when the component needs client-side interactivity (hooks, event handlers, browser APIs). Server components by default.",
+    "All async operations must have try/catch with user-facing error messages. No silent failures.",
+    "Use pnpm for all package operations. Never use npm or yarn.",
+
+    // === NEXT.JS APP ROUTER ===
+    "Use the App Router (src/app/) for all routing. No pages/ directory.",
+    "API routes go in src/app/api/{endpoint}/route.ts using Route Handlers.",
+    "Use Next.js server actions for form mutations where appropriate.",
+    "Use next/font for font loading — never import from Google Fonts CDN directly.",
+    "Use next/image for all images with proper width/height or fill props.",
+
+    // === SHADCN/UI + TAILWIND ===
+    "All UI components must use shadcn/ui with the b1VlIwYS preset. Run: npx shadcn@latest add {component}.",
+    "Use Tailwind utility classes for styling. No custom CSS files unless absolutely necessary (e.g., animations).",
+    "Never use inline style objects in React unless dynamically computed (e.g., brand token colors from client extraction).",
+    "The app chrome uses a neutral palette so it doesn't clash with client brand previews: background #FAFAF8, surface #FFFFFF, text #1A1A1A, accent #2563EB, border #E5E5E3.",
+    "Use consistent spacing: base 4px, scale 4/8/12/16/24/32/48/64. Map to Tailwind: gap-1, gap-2, gap-3, gap-4, gap-6, gap-8, gap-12, gap-16.",
+    "Border radius: buttons 6px (rounded-md), cards 8px (rounded-lg), modals 12px (rounded-xl), pills 9999px (rounded-full).",
+
+    // === COMPONENT PATTERNS ===
+    "Every component file should be self-contained: component + types at the top of the file. Only extract to src/types/ if the type is used across 3+ files.",
+    "Use React Context (src/context/project-context.tsx) for global project state. No Redux, Zustand, or Jotai.",
+    "Custom hooks go in src/hooks/. Each hook has a single responsibility.",
+    "All form inputs must have proper labels, aria attributes, and error states. Use shadcn Form components.",
+    "File upload component must support drag-and-drop, file type validation, and multi-file with remove.",
+
+    // === MULTI-LLM INTEGRATION ===
+    "All LLM API calls go through server-side API routes — never call provider APIs from the client directly.",
+    "The unified LLM client lives at src/lib/llm/index.ts. It accepts a provider + model + apiKey and routes to the correct provider client (anthropic.ts, google.ts, openai.ts). All provider clients return a normalized LLMResponse shape.",
+    "API routes receive the active provider and API key via request headers: x-llm-provider ('anthropic' | 'google' | 'openai') and x-llm-api-key. The server never persists keys.",
+    "Store all prompt templates in src/prompts/ as exported template literal functions that accept structured inputs. Prompts must work across all three providers — avoid provider-specific syntax.",
+    "LLM responses for site generation must return structured JSON. Use a system prompt that enforces JSON-only output with no markdown fences. Test JSON parsing with all three providers.",
+    "Wrap all LLM API calls in retry logic (3 attempts, exponential backoff). Surface rate limit errors and invalid key errors to the user.",
+    "Set max_tokens/max_output_tokens to 4096 for content generation, 1024 for edits and scanning. Map to each provider's parameter name (max_tokens for Anthropic, maxOutputTokens for Gemini, max_tokens for OpenAI).",
+
+    // === LLM SETTINGS + MODEL SELECTOR ===
+    "LLM settings (API keys, selected models, default provider) are stored in localStorage under the key 'ps-llm-settings'. Use the useLLMSettings hook to read/write.",
+    "The LLM context provider (src/context/llm-context.tsx) wraps the app and provides the active provider, model, and API key to all components.",
+    "The editor's AI chat panel has an LLM selector dropdown at the top — a compact select showing the active model name + provider icon. Matches Cursor's model picker UX. Only shows models with valid API keys.",
+    "Users can switch models mid-conversation in the editor. Each AI response bubble shows a subtle badge with the model that generated it.",
+    "The /settings page lets users configure API keys per provider, verify them with a test call, and set a default model. See PRD Section 6.6.",
+    "The /api/verify-key route accepts a provider + key, makes a minimal API call (e.g., list models or a 1-token completion), and returns { valid: boolean, error?: string }.",
+
+    // === PLAYWRIGHT BRAND EXTRACTION ===
+    "Brand extraction runs server-side via the Playwright MCP server.",
+    "The extraction script must: wait for networkidle, extract computed styles from :root and body, parse all CSS custom properties, find the logo element, screenshot at 1440px width.",
+    "Output brand-tokens.json with the BrandTokens interface shape. All colors as hex. All font names as exact family strings.",
+    "If Playwright fails (timeout, blocked), fall back to a simulated extraction with sensible defaults + a warning to the user.",
+
+    // === GENERATED SITE ===
+    "Generated proposal sites use client-namespaced CSS custom properties with the prefix --ps-{clientSlug}- (e.g., --ps-stripe-color-primary). The clientSlug is derived from the client name at intake. Each client gets a fully isolated token namespace so sites never share or collide on token names.",
+    "Generated site sections are React components in src/components/generated-site/.",
+    "Each section component accepts content props (headline, body, items, images) and style props (backgroundColor, textColor, padding, layout).",
+    "The site renderer (site-renderer.tsx) maps the SiteContent data model to a vertical stack of section components.",
+
+    // === EDITOR ===
+    "The editor layout is a 30/70 horizontal split. Left: AI chat. Right: site preview. The split is resizable.",
+    "Inline editing: hover shows a 1px dashed blue outline. Click shows a 2px solid blue outline + floating toolbar.",
+    "The floating toolbar is a portal rendered outside the site preview iframe/container to avoid z-index issues.",
+    "Viewport controls switch the site preview container width: desktop=100%, tablet=768px centered, mobile=375px centered.",
+    "Code view uses Monaco Editor in read-only mode showing the generated JSX/TSX source.",
+
+    // === RISK SCANNER ===
+    "The risk scanner runs pre-deploy, not during editing. It's a blocking step before Vercel deployment.",
+    "Restricted patterns are defined in src/lib/risk-scanner.ts as a typed array of { pattern: RegExp, rule: string, severity: 'high' | 'medium' | 'low', suggestion: string }.",
+    "Claude augments the regex patterns with semantic analysis — it catches meaning-level issues that regex misses (e.g., implicit guarantees, overcommitment framing).",
+
+    // === VERCEL DEPLOYMENT ===
+    "Deploy uses the Vercel REST API (v13/deployments). The generated site is exported as a static Next.js build and uploaded as deployment files.",
+    "Store the Vercel token in an environment variable (VERCEL_TOKEN). Never hardcode.",
+    "After successful deploy, show the live URL with copy-to-clipboard and open-in-new-tab actions.",
+
+    // === FILE ORGANIZATION ===
+    "Follow the file structure defined in the PRD (Section 9). Do not create files outside this structure without justification.",
+    "API routes: one route per agent task (extract-brand, generate-site, edit-section, scan-risk, parse-documents, deploy).",
+    "Components: flat structure in src/components/ for shared components, nested in src/components/editor/ for editor-specific components.",
+
+    // === PERFORMANCE ===
+    "Use React.memo() on editor components that re-render frequently (chat messages, site sections).",
+    "Debounce inline edit operations by 300ms to avoid excessive API calls.",
+    "Use streaming responses from Claude API for the AI chat to show progressive output.",
+    "Lazy-load Monaco Editor and heavy editor components with next/dynamic.",
+
+    // === ERROR HANDLING ===
+    "Every API route must return proper HTTP status codes: 200 (success), 400 (validation), 500 (server error).",
+    "Client-side errors show toast notifications using shadcn Toast component. Never use alert() or console.error() as user feedback.",
+    "If brand extraction fails, show a graceful fallback: let the user manually input brand colors and upload a logo.",
+
+    // === DEMO READINESS ===
+    "Include a seed script (scripts/seed-demo.ts) that pre-populates a demo project with realistic data for the hackathon presentation.",
+    "The seed data should use a real public company (e.g., Stripe) as the client, with pre-extracted brand tokens and a pre-generated site.",
+    "Ensure the full flow works end-to-end without network dependency: seed data + cached API responses as fallback."
+  ],
+
+  // ============================================================
+  // KEY FILES REFERENCE
+  // ============================================================
+
+  "keyFiles": {
+    "src/types/index.ts": "All TypeScript interfaces: Project, BrandTokens, ThemeVariant, SiteContent, SiteSection, RiskFlag, UploadedFile, LLMProvider, LLMProviderConfig, LLMModel, LLMSettings, AVAILABLE_MODELS",
+    "src/context/project-context.tsx": "Global project state with React Context + useReducer. Actions: SET_CLIENT_INFO, SET_BRAND_TOKENS, SET_THEME, SET_SITE_CONTENT, UPDATE_SECTION, ADD_RISK_FLAG, RESOLVE_RISK_FLAG, SET_DEPLOYMENT_URL",
+    "src/context/llm-context.tsx": "LLM settings provider. Reads/writes localStorage ('ps-llm-settings'). Exposes: activeProvider, activeModel, activeApiKey, setProvider, setModel, updateApiKey, isConfigured (boolean — true if at least one provider has a valid key)",
+    "src/lib/llm/index.ts": "Unified LLM client. Exports: generateCompletion(provider, model, apiKey, messages, options) → LLMResponse. Routes to anthropic.ts, google.ts, or openai.ts. Normalizes all responses to { content: string, usage: { inputTokens, outputTokens } }.",
+    "src/lib/llm/anthropic.ts": "Anthropic/Claude client. Uses @anthropic-ai/sdk. Maps to messages.create() endpoint.",
+    "src/lib/llm/google.ts": "Google/Gemini client. Uses @google/generative-ai. Maps to generateContent() endpoint.",
+    "src/lib/llm/openai.ts": "OpenAI client. Uses openai SDK. Maps to chat.completions.create() endpoint.",
+    "src/lib/llm/types.ts": "Shared types: LLMRequest, LLMResponse, LLMMessage (role + content), LLMOptions (maxTokens, temperature, systemPrompt).",
+    "src/hooks/use-llm-settings.ts": "Hook for reading/writing LLM settings from localStorage. Returns: settings, updateProviderKey, verifyKey, setDefaultModel, getActiveConfig.",
+    "src/components/editor/llm-selector.tsx": "Model picker dropdown for the editor chat panel. Shows provider icon + model name. Filters to providers with valid keys. Fires onChange to update active model in LLM context.",
+    "src/components/settings/settings-form.tsx": "Full settings page. Maps over providers, renders ApiKeyRow for each. Default model picker at bottom.",
+    "src/components/settings/api-key-row.tsx": "Single provider row: icon, name, masked key input, show/hide toggle, verify button, model sub-selector, status badge.",
+    "src/prompts/extract-rfp.ts": "Prompt template for RFP document analysis. Input: document text. Output: structured JSON with evaluation criteria, requirements, key dates, scope sections. Provider-agnostic.",
+    "src/prompts/generate-themes.ts": "Prompt template for generating 4 theme variants from brand tokens. Input: BrandTokens. Output: ThemeVariant[]",
+    "src/prompts/generate-site.ts": "Prompt template for full site generation. Input: RFP analysis + win themes + brand tokens + selected theme. Output: SiteContent JSON",
+    "src/prompts/edit-section.ts": "Prompt template for inline editing. Input: current SiteContent + user edit request. Output: diff with updated sections",
+    "src/prompts/scan-risk.ts": "Prompt template for risk scanning. Input: concatenated site text + restricted patterns. Output: RiskFlag[]",
+    "src/lib/playwright-agent.ts": "Playwright brand extraction script. Navigates to URL, extracts styles, screenshots, finds logo, returns BrandTokens.",
+    "src/lib/vercel-deploy.ts": "Vercel deployment wrapper. Creates project, uploads files, triggers build, returns URL."
+  },
+
+  // ============================================================
+  // ENVIRONMENT VARIABLES
+  // ============================================================
+
+  "env": {
+    "VERCEL_TOKEN": "Vercel deployment token (required for deploy)",
+    "VERCEL_TEAM_ID": "Vercel team/org ID (optional)",
+    "NEXT_PUBLIC_APP_URL": "App base URL (for CORS and redirects)"
+    // NOTE: LLM API keys are NOT stored in env vars. They are managed per-user in
+    // localStorage via the Settings page and passed to API routes via request headers.
+    // This keeps the app multi-provider and avoids committing keys to the repo.
+  },
+
+  // ============================================================
+  // SETUP COMMANDS
+  // ============================================================
+
+  "setup": [
+    "pnpm create next-app@latest proposal-studio --typescript --tailwind --eslint --app --src-dir --import-alias '@/*'",
+    "cd proposal-studio",
+    "npx shadcn@latest init --preset b1VlIwYS",
+    "pnpm add @anthropic-ai/sdk @google/generative-ai openai mammoth pdf-parse xlsx @dnd-kit/core @dnd-kit/sortable @tiptap/react @tiptap/starter-kit @monaco-editor/react",
+    "pnpm add -D @types/pdf-parse",
+    "npx shadcn@latest add button input textarea select card tabs dialog toast badge separator scroll-area dropdown-menu tooltip avatar switch label",
+    "// Install MCP servers in Cursor settings:",
+    "// Playwright MCP: @anthropic/playwright-mcp",
+    "// Chrome MCP: configure in Cursor MCP settings"
+  ],
+
+  // ============================================================
+  // ROUTE MAP
+  // ============================================================
+
+  "routes": {
+    "/": "Landing page — hero with 'Get Started' CTA. No scroll. Full viewport.",
+    "/intake": "Intake form — client info, website URL, file upload. Submit triggers brand extraction.",
+    "/theme": "Theme selection (4 cards) + design system tabs (colors, type, spacing, radius, shadow, components). Tab 1: Theme. Tab 2: Design System.",
+    "/loading-build": "Loading screen while site generates. Animated progress + rotating tips.",
+    "/editor": "30/70 split editor. Left: AI chat with LLM model selector dropdown. Right: site preview with inline editing + viewport controls.",
+    "/settings": "LLM API key management — per-provider key input, verify, model selection, default model picker.",
+    "/api/extract-brand": "POST — Playwright crawls client URL, returns BrandTokens + ThemeVariant[]",
+    "/api/parse-documents": "POST — Parses uploaded PDF/DOCX/XLSX files, returns extracted text",
+    "/api/generate-site": "POST — Active LLM generates full proposal site from RFP analysis + tokens + theme. Reads x-llm-provider and x-llm-api-key headers.",
+    "/api/edit-section": "POST — Active LLM processes inline edit request, returns section diff. Reads x-llm-provider and x-llm-api-key headers.",
+    "/api/scan-risk": "POST — Active LLM scans site content for restricted language, returns RiskFlag[]. Reads x-llm-provider and x-llm-api-key headers.",
+    "/api/verify-key": "POST — Validates an LLM API key. Body: { provider, apiKey }. Returns { valid: boolean, error?: string }.",
+    "/api/deploy": "POST — Deploys generated site to Vercel, returns live URL"
+  },
+
+  // ============================================================
+  // COMPONENT TREE
+  // ============================================================
+
+  "componentTree": {
+    "RootLayout": {
+      "GlobalNav": ["Logo", "ViewportControls (editor only)", "SettingsGearIcon (always)", "DeployButton (editor only)"],
+      "LLMProvider": "Wraps app — provides active LLM config from localStorage to all components",
+      "Pages": {
+        "Landing": ["Hero"],
+        "Intake": ["IntakeForm", "FileUpload"],
+        "Theme": ["Tabs", "ThemeGrid > ThemeCard[]", "DesignSystemView > [ColorTokens, TypographyTokens, SpacingTokens, RadiusTokens, ShadowTokens, ComponentPreviews]"],
+        "LoadingBuild": ["LoadingScreen", "TipCard"],
+        "Settings": ["SettingsForm > ApiKeyRow[] (one per provider)", "DefaultModelSelector"],
+        "Editor": {
+          "EditorLayout": {
+            "LeftPanel (30%)": ["LLMSelector (model picker dropdown)", "AIChat > ChatMessage[] (each tagged with model badge)", "ChatInput"],
+            "RightPanel (70%)": ["EditorToolbar > [PreviewCodeToggle, ViewportControls, UndoRedo]", "SitePreview > [SiteRenderer > SiteSection[], InlineEditor, FloatingToolbar]"]
+          },
+          "Modals": ["RiskModal > RiskFlagItem[]", "DeploySuccessModal"]
+        }
+      }
+    }
+  },
+
+  // ============================================================
+  // PRIORITY ORDER FOR BUILD
+  // ============================================================
+
+  "buildOrder": [
+    "Day 1: Project setup (Next.js + shadcn + Tailwind) → Landing page → Settings page (API key management for Claude/Gemini/OpenAI, verify key endpoint, localStorage persistence) → Intake form with file upload → API route for document parsing",
+    "Day 2: Unified LLM client (src/lib/llm/ — index.ts, anthropic.ts, google.ts, openai.ts, types.ts) → LLM context provider → Playwright brand extraction agent → /api/extract-brand → BrandTokens type + output → Theme selection UI (4 cards)",
+    "Day 3: Design system view (all token sections: colors, type, spacing, radius, shadow, component previews) → Token generation from brand data → Theme-to-token mapping",
+    "Day 4: Site generation prompt + API route (multi-LLM) → Loading screen → SiteRenderer component → Generated section components (hero, text, team, timeline, pricing)",
+    "Day 5: Editor layout (30/70 split) → LLM selector dropdown in chat panel → AI chat panel → Inline editing (hover/click states + floating toolbar) → Viewport controls (desktop/tablet/mobile/fullscreen)",
+    "Day 6: Risk scanner (LLM + regex patterns) → Risk review modal → Vercel deploy API route → Deploy flow (scan → review → deploy → success URL)",
+    "Day 7: Polish, seed demo data, end-to-end testing with all 3 providers, demo script rehearsal"
+  ]
+}

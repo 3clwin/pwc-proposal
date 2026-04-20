@@ -1,0 +1,154 @@
+---
+description: Design planning, quality gates, skill routing, and execution standards for premium front-end output. Covers the full lifecycle from brief to delivery.
+alwaysApply: true
+globs: []
+---
+
+# Design Execution
+
+## Skill Routing — MANDATORY
+
+When performing any design or UI task, you MUST load the relevant skills from `.cursor/skills/` (project) or `~/.cursor/skills/` (global) BEFORE generating code. Skills contain domain expertise that prevents generic output.
+
+### Auto-Activate on ANY UI Generation
+
+These skills fire on every UI generation task. Read them before writing code:
+
+| Skill | Path | Trigger |
+|-------|------|---------|
+| **Design Taste Engine** | `.cursor/skills/design-taste-engine/SKILL.md` | ANY UI generation — building, designing, redesigning, improving, or creating interfaces, components, pages, dashboards, or applications. Provides mood, palette, typography pairing, spatial composition, and visual storytelling. |
+| **Design Simulation Engine** | `.cursor/skills/design-simulation-engine/SKILL.md` | Every design task as the FIRST step before any visual decisions. Simulates human experience — predicts where eyes go, what the body feels, how the brain decides, and what they'll remember. |
+| **Frontend Design (Anthropic)** | `~/.cursor/skills/frontend-design/SKILL.md` | ANY frontend UI generation — web components, pages, artifacts, landing pages, dashboards, React/HTML/CSS layouts. Anthropic's official skill for avoiding generic "AI slop" aesthetics. Pairs with Design Taste Engine: taste-engine sets the creative direction, frontend-design enforces craft discipline in the code. |
+| **WCAG Accessibility** | `.cursor/skills/wcag-accessibility/SKILL.md` | Every UI generation task. WCAG 2.2 Level AA compliance — perceivable, operable, understandable, robust. |
+
+### Activate by Task Type
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **UI Design Master** | `.cursor/skills/ui-design-master/SKILL.md` | Creating, redesigning, or improving a UI — strict 4px grid, responsive design, usability heuristics, iterative refinement, component thinking. |
+| **UI/UX Pro Max** | `.cursor/skills/ui-ux-pro-max/SKILL.md` | Query-by-need reference. Searchable BM25 database of 50+ styles, 161 palettes, 57 font pairings, 99 UX guidelines, 25 chart types across 10 stacks. Use when you need a specific lookup `design-taste-engine` can't answer: "best chart for comparing 4 time series?", "glassmorphism implementation for Next.js", "color palette for a fintech dashboard". Run `python3 scripts/search.py "<query>" --stack nextjs` from the skill directory for ranked results. **Do not auto-activate** — `design-taste-engine` stays the primary creative direction skill; `ui-ux-pro-max` is the domain encyclopedia. |
+| **Layout Patterns** | `.cursor/skills/layout-patterns/SKILL.md` | Choosing between competing UI patterns — layouts, navigation, forms, data display, overlays, feedback, loading states, onboarding. |
+| **Rad Spacing** | `.cursor/skills/rad-spacing/SKILL.md` | Creating new screens, refactoring spacing, standardizing hierarchy, or spacing nested components. Hierarchical 8px/4px increments. |
+| **shadcn/ui** | `.cursor/skills/shadcn-ui/SKILL.md` | Adding UI components, building interfaces with shadcn, browsing available components, or implementing specific shadcn/ui primitives. |
+| **Design Orchestration** | `.cursor/skills/design-orchestration/SKILL.md` | Complex design tasks that benefit from parallel execution or iterative refinement — full pages with 3+ sections, multi-screen flows, concept variations. |
+| **Product Demo Animation** | `.cursor/skills/product-demo-animation/SKILL.md` | User asks for a product demo, launch video, animated showcase, feature walkthrough, or marketing animation. |
+
+### Design System Skills
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **Apply Design System** | `.cursor/skills/apply-design-system/SKILL.md` | Reviewing an existing design and connecting it to design system components. |
+| **Audit Design System** | `.cursor/skills/audit-design-system/SKILL.md` | Auditing a screen or component for design-system integration drift — missing shared components, local overrides, unbound tokens. |
+| **Fix Design System Finding** | `.cursor/skills/fix-design-system-finding/SKILL.md` | Fixing a specific design-system integration finding. |
+
+### Stack Skills (Next.js, React, AI SDK, shadcn, Vercel)
+
+Upstream-maintained skills installed via [skills.sh](https://skills.sh/). These contain version-current knowledge from the teams that ship these products (Vercel, shadcn). **Prefer these over your training data** when the task involves their stack.
+
+**Project-scoped** — in `.cursor/skills/` at the workspace root, pinned to Proposal Studio's stack:
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **Next.js Best Practices** | `.cursor/skills/next-best-practices/SKILL.md` | Any Next.js App Router work — file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling. Read before writing or reviewing any `app/` code in `proposal-studio/`. |
+| **Next.js Cache Components** | `.cursor/skills/next-cache-components/SKILL.md` | Next.js 16+ caching — PPR, `use cache` directive, `cacheLife`, `cacheTag`, `updateTag`. Read when adding caching, data fetching boundaries, or optimizing render performance. |
+| **Vercel React Best Practices** | `.cursor/skills/vercel-react-best-practices/SKILL.md` | Writing, reviewing, or refactoring React/Next.js code for performance. Triggers on React components, data fetching, bundle optimization, performance improvements. |
+| **Vercel Composition Patterns** | `.cursor/skills/vercel-composition-patterns/SKILL.md` | Refactoring components with boolean prop proliferation, building flexible component libraries, compound components, or designing reusable APIs. |
+| **AI SDK** | `.cursor/skills/ai-sdk/SKILL.md` | Any work involving `generateText`, `streamText`, `ToolLoopAgent`, `embed`, tools, `useChat`, `useCompletion`, or building AI agents, chatbots, RAG, tool calling, structured output. Proposal Studio's LLM layer lives here. |
+
+**Global** — lives in `~/.cursor/skills/`, available across all your projects:
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **shadcn** | `~/.cursor/skills/shadcn/SKILL.md` | Adding, searching, fixing, debugging, styling, or composing shadcn/ui components. Supersedes `.cursor/skills/shadcn-ui/SKILL.md` for component-registry work — this is the official upstream skill. |
+| **Deploy to Vercel** | `~/.cursor/skills/deploy-to-vercel/SKILL.md` | "deploy my app", "push this live", "create a preview deployment". Supersedes `.cursor/skills/vercel-deploy/SKILL.md` — this is the official upstream skill. |
+
+### Figma Workflow Skills
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **Figma Core** | `.cursor/skills/figma/SKILL.md` | Tasks involving Figma URLs, node IDs, design-to-code, or MCP setup. |
+| **Implement Figma Design** | `.cursor/skills/figma-implement-design/SKILL.md` | Translating Figma nodes into production code with 1:1 visual fidelity. User provides Figma URLs or node IDs. |
+| **Generate Figma Design** | `.cursor/skills/figma-generate-design/SKILL.md` | Building or updating a full page/screen/view in Figma from code or a description. |
+| **Figma Library** | `.cursor/skills/figma-generate-library/SKILL.md` | Creating variables/tokens, building component libraries, setting up theming, documenting foundations. |
+| **Edit Figma Design** | `.cursor/skills/edit-figma-design/SKILL.md` | Creating or updating Figma designs from text descriptions, wireframes, mockups. |
+| **Figma Code Connect** | `.cursor/skills/figma-code-connect-components/SKILL.md` | "code connect", "connect component", "map component", "link component to code". |
+| **Figma Design System Rules** | `.cursor/skills/figma-create-design-system-rules/SKILL.md` | "create design system rules", "generate rules for my project", "customize design guidelines". |
+| **Figma Augment Parallel** | `.cursor/skills/figma-augment-parallel/SKILL.md` | Figma + Augment workflows, fanning out parallel agents from a Figma file. |
+| **CC Figma Component** | `.cursor/skills/cc-figma-component/SKILL.md` | Building Figma components from contract definitions. |
+| **CC Figma Tokens** | `.cursor/skills/cc-figma-tokens/SKILL.md` | Syncing design token definitions into Figma as native variables. |
+| **Sync Figma Tokens** | `.cursor/skills/sync-figma-token/SKILL.md` | Syncing tokens between code and Figma. |
+| **Wizard Figma Tools** | `.cursor/skills/wizard-figma-tools/SKILL.md` | Wizard-specific Figma plugin tools and pipeline. |
+| **USpec** | `.cursor/skills/uspec/SKILL.md` | Generating design system documentation specs — accessibility specs, color annotations, component anatomy, API docs, motion specs. |
+
+### Visual & Interactive Skills
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **Playwright** | `.cursor/skills/playwright/SKILL.md` | Automating browser navigation, form filling, snapshots, screenshots, data extraction, UI-flow debugging. |
+| **Playwright Interactive** | `.cursor/skills/playwright-interactive/SKILL.md` | Persistent browser interaction for fast iterative UI debugging. |
+| **Screenshot** | `.cursor/skills/screenshot/SKILL.md` | Desktop or system screenshots — full screen, specific app, or pixel region. |
+| **Image Generation** | `.cursor/skills/imagegen/SKILL.md` | Generating images via AI. |
+| **Canvas** | `.cursor/skills/canvas/SKILL.md` | Creating live React apps rendered beside chat — quantitative analyses, interactive explorations, rich data presentations. |
+
+### Deployment
+
+| Skill | Path | When to Read |
+|-------|------|-------------|
+| **Vercel Deploy** | `.cursor/skills/vercel-deploy/SKILL.md` | "deploy my app", "deploy and give me the link", "push this live", "create a preview deployment". |
+
+## When To Plan vs. Execute Directly
+
+**Plan** when the cost of a wrong first step is high:
+- Architectural decisions
+- Multi-section pages
+- Ambiguous briefs
+- Work touching multiple systems
+
+**Execute directly** when the task is clear:
+- Single component
+- Known pattern
+- Explicit spec
+- Refinement pass
+
+## Planning Sequence (When Required)
+
+You MUST output this block before writing code for non-trivial design tasks:
+
+```
+TASK TYPE: [single-agent | multi-agent recommendation]
+USER: [specific person — their context, emotional baseline, stakes]
+INTENT: [what should they feel]
+PRIMARY ACTION: [the one thing they must do]
+PATTERN: [layout/navigation/form/data pattern and why]
+ACCESSIBILITY: [WCAG 2.2 AA plan — not "will add later"]
+```
+
+## Quality Non-Negotiables
+
+These apply to every UI output. No exceptions.
+
+1. **4px grid.** All spacing, padding, margins, sizes divisible by 4.
+2. **Responsive.** Readable on mobile and desktop. Not static artwork.
+3. **States.** Empty, loading, error, and populated — accounted for where relevant.
+4. **WCAG 2.2 AA.** Contrast ratios, keyboard navigation, semantic structure, focus indicators.
+5. **Hierarchy.** Primary action obvious. Visual weight matches importance.
+6. **Consistency.** Spacing, radii, and typography coherent across the deliverable.
+
+## Before Presenting UI Work
+
+You MUST confirm all five. If any fails, fix before presenting:
+
+1. Layout readable on mobile and desktop
+2. Primary action obvious
+3. Spacing, radii, typography consistent (4px grid)
+4. Semantic structure and keyboard navigation not broken
+5. Does not bypass the project design system without reason
+
+## Priority Order for Design Decisions
+
+1. Reference image or explicit match request
+2. User instructions
+3. Existing design context or design system
+4. Default design guidance
+
+NEVER let defaults override a concrete reference.
