@@ -101,6 +101,7 @@ export function writeTextToBlock(
       if (field === 'alt') return { ...block, alt: value }
       return block
     case 'fee-headline':
+    case 'slide-1-summary':
     case 'spacer':
       return block
   }
