@@ -425,6 +425,10 @@ function blockLabel(block: ExecSummaryBlock): string {
       return block.value
     case 'workstream-timeline':
       return `${block.bars.length} workstreams`
+    case 'slide-1-summary':
+      return `${block.workstreams.length} workstreams`
+    default:
+      return ''
   }
 }
 

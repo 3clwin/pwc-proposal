@@ -657,8 +657,9 @@ function WorkstreamTimelineRenderer({
           className="mt-4 grid grid-cols-1 gap-4 @sm:grid-cols-2 @2xl:grid-cols-4"
         >
           {block.bars.map((ws) => {
-            const overrideIcon =
-              ws.iconName && findIconByName(ws.iconName)?.Icon
+            const overrideIcon = ws.iconName
+              ? findIconByName(ws.iconName)?.Icon
+              : undefined
             const Icon = overrideIcon ?? ICON_MAP[ws.iconKey ?? 'shield']
             const iconColor = ws.iconColor ?? '#d31710'
             const iconBg = ws.iconBg ?? '#fbf2f0'
@@ -791,8 +792,9 @@ function Slide1SummaryRenderer({ block }: { block: Slide1SummaryBlock }) {
           className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/10 @sm:grid-cols-2 @2xl:grid-cols-4"
         >
           {block.workstreams.map((ws) => {
-            const overrideIcon =
-              ws.iconName && findIconByName(ws.iconName)?.Icon
+            const overrideIcon = ws.iconName
+              ? findIconByName(ws.iconName)?.Icon
+              : undefined
             const Icon = overrideIcon ?? ICON_MAP[ws.iconKey]
             const iconColor = ws.iconColor ?? '#d31710'
             const iconBg = ws.iconBg ?? '#ffffff'
