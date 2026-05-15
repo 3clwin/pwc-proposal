@@ -82,9 +82,6 @@ function Bar({ className, reduce, delay = 0 }: BarProps) {
             background:
               'linear-gradient(90deg, rgba(229,231,235,0) 0%, rgba(255,255,255,0.85) 50%, rgba(229,231,235,0) 100%)',
             animation: 'cover-shimmer-sweep 1.6s linear infinite',
-            // Per-bar phase offset so neighboring bars don't flash in
-            // perfect lockstep — gives the whole skeleton a living
-            // feel while still looping every bar continuously.
             animationDelay: `-${(delay * 1000) % 1600}ms`,
           }}
         />

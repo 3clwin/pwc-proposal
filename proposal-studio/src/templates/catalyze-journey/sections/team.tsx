@@ -10,7 +10,7 @@ import {
   SectionHeading,
 } from '../../shared/typography'
 import { PlaceholderImage } from '../../shared/placeholder-image'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 import type { TeamMember } from '@/data/catalyze-journey-content'
 
@@ -37,7 +37,7 @@ const TIER_TONE: Record<
  * initials stand in for real headshots.
  */
 export function TeamSection() {
-  const { team } = CATALYZE_JOURNEY_CONTENT
+  const { team } = useJourneyContent()
 
   const grouped: Record<TeamMember['tier'], TeamMember[]> = {
     core: [],
@@ -92,7 +92,7 @@ export function TeamSection() {
                   initial="hidden"
                   whileInView="show"
                   viewport={VIEWPORT_ONCE}
-                  className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                  className="grid grid-cols-1 gap-8 @sm:grid-cols-2 @lg:grid-cols-3 sm:grid-cols-2 lg:grid-cols-3"
                 >
                   {grouped[tier].map((member) => (
                     <motion.article

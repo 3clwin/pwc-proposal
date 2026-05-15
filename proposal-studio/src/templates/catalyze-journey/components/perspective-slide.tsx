@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { VIEWPORT_ONCE } from '../../shared/motion'
 
@@ -45,23 +44,13 @@ export function PerspectiveSlide({
         viewport={VIEWPORT_ONCE}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="relative mx-auto w-full"
-        style={{ aspectRatio: '16 / 9' }}
       >
-        {/* `unoptimized` so Next.js serves the source PNG byte-for-
-            byte rather than re-encoding to WebP at quality 75
-            (which destroys the fine UI text in the compositions).
-            Lazy-loaded — these slides only appear deep in the
-            Vision section, never above the fold, so they shouldn't
-            block the initial paint. */}
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={src}
           alt={alt}
-          fill
-          sizes="(min-width: 1280px) 1280px, 100vw"
-          quality={100}
-          className="object-contain"
+          className="block h-auto w-full"
           loading="lazy"
-          unoptimized
         />
       </motion.div>
     </section>

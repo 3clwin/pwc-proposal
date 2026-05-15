@@ -100,11 +100,14 @@ export function writeTextToBlock(
       if (field === 'caption') return { ...block, caption: value }
       if (field === 'alt') return { ...block, alt: value }
       return block
+    case 'slide-1-summary':
+      return block
     case 'fee-headline':
     case 'slide-1-summary':
     case 'spacer':
       return block
   }
+  return block
 }
 
 /** Commit a new image `src` + `alt` onto an image block. */

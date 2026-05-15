@@ -155,17 +155,24 @@
 }
 
 /* ───────── Template container-query responsive rules ─────────
- * Templates are rendered inside an editor viewport narrower than the
- * browser window. Tailwind's sm:/md:/lg: fire on window width which
- * doesn't match what the template actually sees, so we layer container
- * queries on top for the most visible layout elements.
+ * Templates render inside an editor viewport that is narrower than the
+ * browser window. Tailwind viewport breakpoints (sm:/md:/lg:) fire on
+ * window width, not the container the template actually lives in. These
+ * container-query overrides re-align layout, type, and spacing to the
+ * real available width.
+ *
+ * Breakpoints (container-inline-size):
+ *   ≤ 1023px — mirrors lg: → off   (3-col grids → 2-col, side-by-side → stack)
+ *   ≤  767px — mirrors md: → off   (2-col grids → 1-col, split layouts → stack)
+ *   ≤  639px — mirrors sm: → off   (tighten padding, scale type further)
+ *   ≤  520px — extra-small mobile   (minimum padding, compressed type)
  */
 .tpl-root {
   container-type: inline-size;
 }
 
-/* Hide huge display sizes when container is narrow */
-@container (max-width: 900px) {
+/* ── Below lg (≤ 1023px) ── */
+@container (max-width: 1023px) {
   .tpl-root h1 {
     font-size: clamp(2rem, 6cqw, 3.75rem) !important;
     line-height: 1.05 !important;
@@ -174,9 +181,121 @@
     font-size: clamp(1.5rem, 4.5cqw, 3rem) !important;
     line-height: 1.12 !important;
   }
+
+  /* 3+ column grids → 2 columns */
+  .tpl-root .lg\:grid-cols-3,
+  .tpl-root .lg\:grid-cols-4,
+  .tpl-root .lg\:grid-cols-5,
+  .tpl-root .lg\:grid-cols-6,
+  .tpl-root .lg\:grid-cols-7 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Asymmetric lg splits → stack */
+  .tpl-root .lg\:grid-cols-\[3fr_1fr\],
+  .tpl-root .lg\:grid-cols-\[1fr_auto_1fr\] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* lg: col-span overrides → auto */
+  .tpl-root .lg\:col-span-2 {
+    grid-column: auto !important;
+  }
+
+  /* lg flex-row → column */
+  .tpl-root .lg\:flex-row {
+    flex-direction: column !important;
+  }
+  .tpl-root .lg\:items-end {
+    align-items: flex-start !important;
+  }
+  .tpl-root .lg\:text-right {
+    text-align: left !important;
+  }
+
+  /* lg: padding → medium step */
+  .tpl-root .lg\:px-16,
+  .tpl-root .lg\:pl-16 {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+  .tpl-root .lg\:p-14 {
+    padding: 40px !important;
+  }
+
+  /* lg: border-left decorations → hide */
+  .tpl-root .lg\:border-l {
+    border-left-width: 0 !important;
+  }
+  .tpl-root .lg\:pl-16 {
+    padding-left: 0 !important;
+  }
+
+  /* lg: hidden elements → show */
+  .tpl-root .lg\:block {
+    display: block;
+  }
+  .tpl-root .lg\:justify-start {
+    justify-content: center !important;
+  }
 }
 
-@container (max-width: 680px) {
+/* ── Below md (≤ 767px) ── */
+@container (max-width: 767px) {
+  /* 2-col grids → 1 column */
+  .tpl-root .md\:grid-cols-2,
+  .tpl-root .md\:grid-cols-3,
+  .tpl-root .md\:grid-cols-4,
+  .tpl-root .md\:grid-cols-5,
+  .tpl-root .md\:grid-cols-6,
+  .tpl-root .sm\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Asymmetric md splits → stack */
+  .tpl-root .md\:grid-cols-\[1\.2fr\,1fr\],
+  .tpl-root .md\:grid-cols-\[1fr_2fr\],
+  .tpl-root .md\:grid-cols-\[2fr\,3fr\],
+  .tpl-root .md\:grid-cols-\[3fr\,2fr\],
+  .tpl-root .md\:grid-cols-\[200px_1fr\],
+  .tpl-root .md\:grid-cols-\[1fr_2fr\],
+  .tpl-root .md\:grid-cols-\[auto\,1fr\] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* md flex-row → column */
+  .tpl-root .md\:flex-row {
+    flex-direction: column !important;
+  }
+
+  /* md: border-left decorations → hide */
+  .tpl-root .md\:border-l {
+    border-left-width: 0 !important;
+  }
+  .tpl-root .md\:pl-6,
+  .tpl-root .md\:pl-16 {
+    padding-left: 0 !important;
+  }
+
+  /* md hidden → still hidden */
+  .tpl-root .md\:border-t-0 {
+    border-top-width: 1px !important;
+  }
+
+  /* Section + header padding */
+  .tpl-root section,
+  .tpl-root header {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+  .tpl-root section {
+    padding-top: 64px !important;
+    padding-bottom: 64px !important;
+  }
+}
+
+/* ── Below sm (≤ 639px) ── */
+@container (max-width: 639px) {
   .tpl-root section,
   .tpl-root header {
     padding-left: 20px !important;
@@ -186,11 +305,51 @@
     padding-top: 56px !important;
     padding-bottom: 56px !important;
   }
-  .tpl-root .grid {
+
+  /* sm: padding overrides */
+  .tpl-root .sm\:px-10,
+  .tpl-root .sm\:px-16 {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .tpl-root .sm\:p-10,
+  .tpl-root .sm\:p-14 {
+    padding: 24px !important;
+  }
+  .tpl-root .sm\:py-24 {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+  .tpl-root .sm\:py-32 {
+    padding-top: 64px !important;
+    padding-bottom: 64px !important;
+  }
+  .tpl-root .sm\:py-40 {
+    padding-top: 80px !important;
+    padding-bottom: 80px !important;
+  }
+
+  /* sm: column count */
+  .tpl-root .sm\:grid-cols-2,
+  .tpl-root .sm\:grid-cols-3,
+  .tpl-root .sm\:grid-cols-4,
+  .tpl-root .sm\:grid-cols-5 {
     grid-template-columns: 1fr !important;
+  }
+
+  /* sm: hidden elements stay hidden */
+  .tpl-root .sm\:block {
+    display: none !important;
+  }
+
+  /* sm: padding on EditorialContainer */
+  .tpl-root .sm\:pl-10,
+  .tpl-root .sm\:pl-14 {
+    padding-left: 12px !important;
   }
 }
 
+/* ── Extra-small (≤ 520px) ── */
 @container (max-width: 520px) {
   .tpl-root h1 {
     font-size: clamp(1.5rem, 8cqw, 2.25rem) !important;

@@ -7,9 +7,9 @@ import {
   Check,
   X,
   Loader2,
-  Sparkles,
   ShieldAlert,
   ShieldCheck,
+  Info,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,16 +38,57 @@ interface RiskModalProps {
 
 type Severity = RiskFlag['severity']
 
-const SEVERITY_VARIANT: Record<Severity, 'destructive' | 'default' | 'secondary'> = {
-  high: 'destructive',
-  medium: 'default',
-  low: 'secondary',
+interface SeverityTheme {
+  label: string
+  /** Classes applied to the severity Badge itself. */
+  badge: string
+  /** Subtle card-body tint + left-accent bar so severity is legible
+   *  at a glance without reading the badge text. */
+  card: string
+  /** Icon rendered next to the suggestion line for this severity. */
+  icon: typeof AlertTriangle
 }
 
-const SEVERITY_LABEL: Record<Severity, string> = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
+// Status-color palette mapping severity → real signal colors, not just
+// shadcn's generic Badge variants. Each severity gets a matching card
+// tint + left-accent so the list reads as a legend even without the
+// badge labels (legibility under cognitive load — a consultant about
+// to ship doesn't want to decode arbitrary hues).
+//
+// - HIGH   → red    (destructive: reconsider before shipping)
+// - MEDIUM → amber  (warning: address if possible)
+// - LOW    → blue   (informational: awareness only)
+const SEVERITY_THEMES: Record<Severity, SeverityTheme> = {
+  high: {
+    label: 'High',
+    badge:
+      'bg-red-100 text-red-800 border border-red-200 ' +
+      'dark:bg-red-950/60 dark:text-red-200 dark:border-red-900',
+    card:
+      'border-red-200 bg-red-50/60 ' +
+      'dark:border-red-900/60 dark:bg-red-950/20',
+    icon: ShieldAlert,
+  },
+  medium: {
+    label: 'Medium',
+    badge:
+      'bg-amber-100 text-amber-800 border border-amber-200 ' +
+      'dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-900',
+    card:
+      'border-amber-200 bg-amber-50/60 ' +
+      'dark:border-amber-900/60 dark:bg-amber-950/20',
+    icon: AlertTriangle,
+  },
+  low: {
+    label: 'Low',
+    badge:
+      'bg-blue-100 text-blue-800 border border-blue-200 ' +
+      'dark:bg-blue-950/60 dark:text-blue-200 dark:border-blue-900',
+    card:
+      'border-blue-200 bg-blue-50/60 ' +
+      'dark:border-blue-900/60 dark:bg-blue-950/20',
+    icon: Info,
+  },
 }
 
 // Stable sort so open items surface first, then by severity, then by order received.
@@ -80,6 +121,27 @@ export function RiskModal({
   const canDeploy = openFlags.length === 0
   const progress = total === 0 ? 100 : Math.round((resolvedCount / total) * 100)
 
+  // Highest severity currently open drives the header badge color so
+  // the user sees at a glance whether the blockers are red/amber/blue
+  // without counting badges in the list.
+  const topSeverity: Severity | null = openFlags.reduce<Severity | null>((acc, f) => {
+    if (!acc) return f.severity
+    return SEVERITY_RANK[f.severity] < SEVERITY_RANK[acc] ? f.severity : acc
+  }, null)
+
+  // Header shield is kept neutral for medium/unknown severities so the
+  // modal doesn't lean yellow by default — the severity-colored cards
+  // below already carry that signal. Only escalate the bubble color
+  // when the top open flag is `high` (red) or `low` (blue), or when
+  // everything is cleared (emerald).
+  const headerBadgeClass = canDeploy
+    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+    : topSeverity === 'high'
+      ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+      : topSeverity === 'low'
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+        : 'bg-muted text-foreground dark:bg-muted dark:text-foreground'
+
   function handleDismissAll() {
     for (const flag of openFlags) {
       onResolve(flag.id, 'dismissed')
@@ -95,9 +157,7 @@ export function RiskModal({
             <div
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-full',
-                canDeploy
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
-                  : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                headerBadgeClass,
               )}
               aria-hidden
             >
@@ -143,24 +203,37 @@ export function RiskModal({
           <ul className="flex flex-col gap-2 px-6 py-4" role="list">
             {sorted.map((flag) => {
               const isResolved = flag.status !== 'open'
-              const badgeVariant = SEVERITY_VARIANT[flag.severity]
+              const theme = SEVERITY_THEMES[flag.severity]
+              const SeverityIcon = theme.icon
 
               return (
                 <li
                   key={flag.id}
                   className={cn(
-                    'group rounded-xl border bg-card p-3 transition-colors',
+                    'group rounded-xl border p-3 transition-colors',
                     isResolved
                       ? 'border-border/60 bg-muted/40'
-                      : 'border-border hover:border-border/80'
+                      : theme.card,
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant={badgeVariant} className="text-[10px] uppercase tracking-wide">
-                          {SEVERITY_LABEL[flag.severity]}
-                        </Badge>
+                        <span
+                          className={cn(
+                            // Shaped like shadcn Badge but colored by
+                            // severity. We render a span directly
+                            // rather than the Badge primitive because
+                            // shadcn doesn't ship warning/info variants
+                            // and overriding `variant` would fight the
+                            // built-in bg/text classes.
+                            'inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[10px] font-semibold uppercase tracking-wide',
+                            theme.badge,
+                          )}
+                        >
+                          <SeverityIcon className="size-2.5" aria-hidden />
+                          {theme.label}
+                        </span>
                         <span className="text-xs font-medium text-muted-foreground">
                           {flag.rule}
                         </span>
@@ -185,10 +258,17 @@ export function RiskModal({
 
                       {flag.suggestedReplacement && !isResolved && (
                         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                          <Sparkles
-                            className="mt-0.5 size-3 shrink-0 text-primary"
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 1134 1125"
+                            fill="black"
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="mt-0.5 shrink-0"
                             aria-hidden
-                          />
+                          >
+                            <path d="M562.91 0L564.058 0.453222C566.841 150.394 628.593 293.2 735.931 397.929C805.33 465.99 891.017 515.124 984.808 540.64C1029.36 553.012 1076.45 558.754 1122.59 560.612C1124.3 560.682 1132.34 560.495 1133.11 561.497C1091.54 563.846 1065.12 564.795 1022.98 572.893C901.628 597.163 791.449 660.198 709.013 752.501C617.765 855.122 566.32 987.057 564.023 1124.36L562.857 1124.41C562.88 1106.14 560.308 1079.07 557.97 1060.76C542.796 938.776 488.375 825.04 402.914 736.692C298.151 627.942 154.604 565.083 3.63861 561.836L0 560.583C20.0998 560.682 47.7928 558.028 67.6947 555.379C186.198 539.815 296.763 487.236 383.627 405.138C497.099 298.497 558.128 154.976 562.91 0Z" />
+                          </svg>
                           <span>
                             <span className="font-medium text-foreground">Suggestion:</span>{' '}
                             {flag.suggestedReplacement}

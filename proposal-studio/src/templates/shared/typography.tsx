@@ -225,9 +225,9 @@ interface StatNumeralProps {
 }
 
 const STAT_SIZE: Record<NonNullable<StatNumeralProps['size']>, string> = {
-  md: 'clamp(44px, 5vw, 72px)',
-  lg: 'clamp(56px, 7vw, 104px)',
-  xl: 'clamp(72px, 9vw, 140px)',
+  md: 'clamp(32px, 12cqw, 72px)',
+  lg: 'clamp(40px, 16cqw, 104px)',
+  xl: 'clamp(48px, 20cqw, 140px)',
 }
 
 export function StatNumeral({
@@ -297,7 +297,7 @@ export function EditorialContainer({
   className,
 }: EditorialContainerProps) {
   return (
-    <div className={cn('mx-auto px-6 sm:px-10 lg:px-16', MEASURE[measure], className)}>
+    <div className={cn('mx-auto px-6 @sm:px-10 @lg:px-16 sm:px-10 lg:px-16', MEASURE[measure], className)}>
       {children}
     </div>
   )

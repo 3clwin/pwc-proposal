@@ -76,87 +76,89 @@ export function OpmodelWorkstreamDiagram({
     >
       {/* ─── Row 1: Phase ─── */}
       <Row label="Phase">
-        <div className="flex flex-col gap-2">
-          {/* Month axis */}
-          <div
-            className="grid"
-            style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
-          >
-            {months.map((m) => (
-              <div
-                key={m}
-                className="border-b py-2 text-center font-mono text-[10px] uppercase tracking-[0.18em]"
-                style={{ borderColor: DIAGRAM_PALETTE.hairline, color: DIAGRAM_PALETTE.inkSoft }}
-              >
-                {m}
-              </div>
-            ))}
-          </div>
-
-          {/* Chevrons */}
-          <div className="relative flex flex-col gap-2 pt-3">
-            {chevrons.map((chev, i) => {
-              const startIdx = months.indexOf(chev.spans[0]!)
-              const endIdx = months.indexOf(chev.spans[chev.spans.length - 1]!)
-              const colSpan = endIdx - startIdx + 1
-              const isPrimary = chev.tone === 'red'
-              return (
-                <motion.div
-                  key={chev.label}
-                  initial={reduce ? undefined : { opacity: 0, x: -12 }}
-                  whileInView={reduce ? undefined : { opacity: 1, x: 0 }}
-                  viewport={VIEWPORT_ONCE}
-                  transition={{ duration: 0.5, delay: 0.15 + i * 0.12 }}
-                  className="grid"
-                  style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
-                >
-                  <div
-                    className="flex items-center px-4 py-2.5 font-display text-[13px] italic"
-                    style={{
-                      gridColumn: `${startIdx + 1} / span ${colSpan}`,
-                      backgroundColor: isPrimary ? DIAGRAM_PALETTE.red : DIAGRAM_PALETTE.redSoft,
-                      color: isPrimary ? DIAGRAM_PALETTE.white : DIAGRAM_PALETTE.redDeep,
-                      clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)',
-                    }}
-                  >
-                    {chev.label}
-                  </div>
-                </motion.div>
-              )
-            })}
-
-            {/* WS marker row */}
+        <div className="-mx-2 overflow-x-auto px-2">
+          <div className="flex min-w-[480px] flex-col gap-2">
+            {/* Month axis */}
             <div
-              className="grid pt-2"
+              className="grid"
               style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
             >
-              {months.map((m) => {
-                const allMarkers = chevrons.flatMap((c) =>
-                  c.spans.map((s, i) => ({ month: s, marker: c.markers[i] })),
-                )
-                const marker = allMarkers.find((mk) => mk.month === m)?.marker
+              {months.map((m) => (
+                <div
+                  key={m}
+                  className="border-b py-2 text-center font-mono text-[10px] uppercase tracking-[0.18em]"
+                  style={{ borderColor: DIAGRAM_PALETTE.hairline, color: DIAGRAM_PALETTE.inkSoft }}
+                >
+                  {m}
+                </div>
+              ))}
+            </div>
+
+            {/* Chevrons */}
+            <div className="relative flex flex-col gap-2 pt-3">
+              {chevrons.map((chev, i) => {
+                const startIdx = months.indexOf(chev.spans[0]!)
+                const endIdx = months.indexOf(chev.spans[chev.spans.length - 1]!)
+                const colSpan = endIdx - startIdx + 1
+                const isPrimary = chev.tone === 'red'
                 return (
-                  <div key={m} className="flex flex-col items-center gap-1">
-                    {marker ? (
-                      <>
-                        <span
-                          aria-hidden
-                          className="block size-2 rotate-45"
-                          style={{ backgroundColor: DIAGRAM_PALETTE.ink }}
-                        />
-                        <span
-                          className="font-mono text-[9px] uppercase tracking-[0.18em]"
-                          style={{ color: DIAGRAM_PALETTE.inkSoft }}
-                        >
-                          {marker}
-                        </span>
-                      </>
-                    ) : (
-                      <span aria-hidden className="block h-2" />
-                    )}
-                  </div>
+                  <motion.div
+                    key={chev.label}
+                    initial={reduce ? undefined : { opacity: 0, x: -12 }}
+                    whileInView={reduce ? undefined : { opacity: 1, x: 0 }}
+                    viewport={VIEWPORT_ONCE}
+                    transition={{ duration: 0.5, delay: 0.15 + i * 0.12 }}
+                    className="grid"
+                    style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
+                  >
+                    <div
+                      className="flex items-center whitespace-nowrap px-4 py-2.5 font-display text-[13px] italic"
+                      style={{
+                        gridColumn: `${startIdx + 1} / span ${colSpan}`,
+                        backgroundColor: isPrimary ? DIAGRAM_PALETTE.red : DIAGRAM_PALETTE.redSoft,
+                        color: isPrimary ? DIAGRAM_PALETTE.white : DIAGRAM_PALETTE.redDeep,
+                        clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)',
+                      }}
+                    >
+                      {chev.label}
+                    </div>
+                  </motion.div>
                 )
               })}
+
+              {/* WS marker row */}
+              <div
+                className="grid pt-2"
+                style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
+              >
+                {months.map((m) => {
+                  const allMarkers = chevrons.flatMap((c) =>
+                    c.spans.map((s, i) => ({ month: s, marker: c.markers[i] })),
+                  )
+                  const marker = allMarkers.find((mk) => mk.month === m)?.marker
+                  return (
+                    <div key={m} className="flex flex-col items-center gap-1">
+                      {marker ? (
+                        <>
+                          <span
+                            aria-hidden
+                            className="block size-2 rotate-45"
+                            style={{ backgroundColor: DIAGRAM_PALETTE.ink }}
+                          />
+                          <span
+                            className="font-mono text-[9px] uppercase tracking-[0.18em]"
+                            style={{ color: DIAGRAM_PALETTE.inkSoft }}
+                          >
+                            {marker}
+                          </span>
+                        </>
+                      ) : (
+                        <span aria-hidden className="block h-2" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

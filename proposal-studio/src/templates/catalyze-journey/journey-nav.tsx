@@ -218,7 +218,7 @@ export function JourneyNav({
                   onClick={onReturnToCover}
                   aria-label="Return to cover"
                   className={cn(
-                    'flex shrink-0 cursor-pointer items-center gap-2.5 rounded-md tracking-tight text-foreground transition-opacity @sm:gap-3',
+                    'col-start-1 flex shrink-0 cursor-pointer items-center gap-2.5 rounded-md tracking-tight text-foreground transition-opacity @sm:gap-3',
                     'hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d31710]/30 focus-visible:ring-offset-2',
                   )}
                 >
@@ -227,13 +227,13 @@ export function JourneyNav({
                     aria-hidden
                     className="hidden h-3 w-px bg-black/15 @sm:block"
                   />
-                  <span className="hidden font-label text-[14px] uppercase tracking-[0.28em] text-muted-foreground @sm:inline">
+                  <span className="hidden font-label text-[14px] uppercase tracking-[0.28em] text-black @sm:inline">
                     Catalyze360
                   </span>
                 </button>
               ) : (
                 <div
-                  className="flex shrink-0 items-center gap-2.5 tracking-tight text-foreground @sm:gap-3"
+                  className="col-start-1 flex shrink-0 items-center gap-2.5 tracking-tight text-foreground @sm:gap-3"
                   aria-label="PwC · Catalyze 360"
                 >
                   <Logo className="h-6 w-auto text-foreground @sm:h-7" />
@@ -241,7 +241,7 @@ export function JourneyNav({
                     aria-hidden
                     className="hidden h-3 w-px bg-black/15 @sm:block"
                   />
-                  <span className="hidden font-label text-[14px] uppercase tracking-[0.28em] text-muted-foreground @sm:inline">
+                  <span className="hidden font-label text-[14px] uppercase tracking-[0.28em] text-black @sm:inline">
                     Catalyze360
                   </span>
                 </div>
@@ -254,7 +254,7 @@ export function JourneyNav({
                   the nav reads logo · · · TOC · · · actions. Below
                   @4xl the list is `display: none` and the track
                   collapses to empty space. */}
-              <ol className="hidden items-center gap-5 justify-self-center @4xl:flex">
+              <ol className="col-start-2 hidden items-center gap-5 justify-self-center @4xl:flex">
                 {entries.map((entry, i) => {
                   const isActive = entry.id === activeId
                   const isPast = i < activeIndex
@@ -291,7 +291,7 @@ export function JourneyNav({
               {/* Right cell — mobile menu (hidden at @4xl+) + Contact us
                   CTA. Kept together so the two actions sit as one
                   cluster on the far right of the bar. */}
-              <div className="flex items-center justify-end gap-3 @sm:gap-5">
+              <div className="col-start-3 flex items-center justify-end gap-3 @sm:gap-5">
               {/* Mobile / tablet: active-section marker + DropdownMenu */}
               <div className="flex items-center gap-2 @4xl:hidden">
                 <div className="hidden items-center @sm:flex">

@@ -10,7 +10,7 @@ import {
 } from '../../shared/typography'
 import { PerspectiveSlides } from '../components/perspective-slides'
 import { BackboneArchitectureDiagram } from '../components/backbone-architecture-diagram'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import {
   FADE_UP,
   STAGGER_PARENT,
@@ -30,7 +30,7 @@ import {
  *        each rendered as a wide split-screen editorial.
  */
 export function VisionSection() {
-  const { vision } = CATALYZE_JOURNEY_CONTENT
+  const { vision } = useJourneyContent()
 
   return (
     <>
@@ -115,7 +115,7 @@ export function VisionSection() {
               initial="hidden"
               whileInView="show"
               viewport={VIEWPORT_LATE}
-              className="mt-24 grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-5"
+              className="mt-24 grid grid-cols-1 gap-x-8 gap-y-14 @sm:grid-cols-2 @lg:grid-cols-5 sm:grid-cols-2 lg:grid-cols-5"
             >
               {vision.principles.map((principle, i) => (
                 <motion.div

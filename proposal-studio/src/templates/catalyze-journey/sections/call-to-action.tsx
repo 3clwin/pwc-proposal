@@ -6,7 +6,7 @@ import {
   Eyebrow,
 } from '../../shared/typography'
 import { QuagmireDiagram } from '../components/quagmire-diagram'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -18,7 +18,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  * Integrated Shop" — two columns of items with an arrow between.
  */
 export function CallToActionSection() {
-  const { callToAction } = CATALYZE_JOURNEY_CONTENT
+  const { callToAction } = useJourneyContent()
 
   return (
     <>
@@ -50,7 +50,7 @@ export function CallToActionSection() {
             transition={{ duration: 0.9 }}
           >
             <div
-              className="w-full max-w-[1000px] overflow-hidden rounded-4xl px-8 py-16 shadow-2xl shadow-foreground/5 ring-1 ring-foreground/5 sm:px-16 sm:py-24 lg:px-24 lg:py-28"
+              className="w-full max-w-[1000px] overflow-hidden rounded-4xl px-8 py-16 shadow-2xl shadow-foreground/5 ring-1 ring-foreground/5 @sm:px-16 @sm:py-24 @lg:px-24 @lg:py-28 sm:px-16 sm:py-24 lg:px-24 lg:py-28"
               style={{ backgroundColor: '#fbf2f0' }}
             >
               {/* Red horizontal rule */}
@@ -66,9 +66,7 @@ export function CallToActionSection() {
               >
                 <p>{callToAction.pullQuote.text}</p>
                 <p>
-                  Fragmented efforts risk dimming Catalyze 360’s spark, even as
-                  the world’s most promising biotech partners are seeking a true
-                  collaborator.
+                  {callToAction.bodyParagraph}
                 </p>
                 <p>
                   This opportunity is about{' '}
@@ -79,10 +77,10 @@ export function CallToActionSection() {
                       fontStyle: 'italic',
                     }}
                   >
-                    unlocking a unified, purpose-driven partnership experience
+                    {callToAction.oneStopClosing}
                   </em>{' '}
-                  that can transform how Lilly engages with rising biotechs to
-                  shape the future of science.
+                  through a proposal experience that connects requirements,
+                  brand, proof, and delivery into one executive-ready story.
                 </p>
               </div>
             </div>

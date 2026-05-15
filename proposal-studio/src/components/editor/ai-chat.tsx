@@ -5,9 +5,9 @@ import { Plus, ArrowUp, Mic, Loader2, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { LLMSelector } from './llm-selector'
 import { ChatMessage } from './chat-message'
+import { EditorTooltip } from './editor-tooltip'
 import { useProject } from '@/context/project-context'
 import { useLLM } from '@/context/llm-context'
 import type { SiteContent } from '@/types'
@@ -45,8 +45,12 @@ export function AIChat() {
 
   useEffect(() => {
     if (textareaRef.current) {
+      if (!input.trim()) {
+        textareaRef.current.style.height = '28px'
+        return
+      }
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 96)}px`
     }
   }, [input])
 
@@ -60,11 +64,13 @@ export function AIChat() {
     setSending(true)
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-llm-provider': activeProvider,
+        'x-llm-model': activeModel,
+      }
       if (activeApiKey) {
-        headers['x-llm-provider'] = activeProvider
         headers['x-llm-api-key'] = activeApiKey
-        headers['x-llm-model'] = activeModel
       }
 
       const res = await fetch('/api/edit-section', {
@@ -157,7 +163,7 @@ export function AIChat() {
       {/* Composer */}
       <div className="shrink-0 px-3 pb-3 pt-2">
         <div className="overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
-          <div className="px-3 pt-3 pb-2">
+          <div className="px-3 pt-3 pb-1">
             <textarea
               ref={textareaRef}
               value={input}
@@ -165,30 +171,51 @@ export function AIChat() {
               onKeyDown={handleKeyDown}
               placeholder="Send follow-up"
               rows={1}
-              className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
+              className="max-h-24 min-h-7 w-full resize-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
 
-          <div className="flex items-center gap-1 px-2 py-1.5">
+          <div className="flex h-9 items-center gap-1 px-2 pb-1.5">
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
-              <Button variant="ghost" size="icon-xs" className="shrink-0 rounded-full text-muted-foreground hover:text-foreground">
-                <Plus className="size-4" />
-              </Button>
+              <EditorTooltip label="Add attachment or context" side="top">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Add attachment or context"
+                  className="shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </EditorTooltip>
               <LLMSelector />
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
-              <Button variant="ghost" size="icon-xs" className="rounded-full text-muted-foreground hover:text-foreground">
-                <Mic className="size-4" />
-              </Button>
-              <Button
-                size="icon-xs"
-                onClick={handleSend}
-                disabled={sending || !hasInput}
-                className="rounded-full"
+              <EditorTooltip label="Voice input" side="top">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Voice input"
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <Mic className="size-4" />
+                </Button>
+              </EditorTooltip>
+              <EditorTooltip
+                label={hasInput ? 'Send message' : 'Type a message to send'}
+                side="top"
+                disabledTrigger={sending || !hasInput}
               >
-                <ArrowUp className="size-3.5" />
-              </Button>
+                <Button
+                  size="icon-xs"
+                  onClick={handleSend}
+                  disabled={sending || !hasInput}
+                  aria-label="Send message"
+                  className="rounded-full"
+                >
+                  <ArrowUp className="size-3.5" />
+                </Button>
+              </EditorTooltip>
             </div>
           </div>
         </div>

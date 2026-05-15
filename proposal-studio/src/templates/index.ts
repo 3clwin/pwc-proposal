@@ -6,8 +6,7 @@ import { CardPreview as EditorialCard } from './editorial-science/card-preview'
 import { FullSite as EditorialFull } from './editorial-science/full-site'
 import { CardPreview as BoldCard } from './bold-momentum/card-preview'
 import { FullSite as BoldFull } from './bold-momentum/full-site'
-import { CardPreview as WarmCard } from './warm-partnership/card-preview'
-import { FullSite as WarmFull } from './warm-partnership/full-site'
+
 import { TEMPLATE_IDS } from './types'
 import type { TemplateDefinition, TemplateId } from './types'
 import type { BrandTokens } from '@/types'
@@ -31,6 +30,25 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
     // Lilly-only gate — this template is tuned to the Catalyze360 deck and
     // renders verbatim deck content, so it only appears for Lilly clients.
     isAvailable: (tokens: BrandTokens) => tokens.clientSlug?.toLowerCase() === 'lilly',
+    CardPreview: CatalyzeCard,
+    FullSite: CatalyzeFull,
+  },
+  [TEMPLATE_IDS.JOURNEY_ADAPTED]: {
+    id: TEMPLATE_IDS.JOURNEY_ADAPTED,
+    label: 'Journey',
+    description:
+      'The Lilly Journey narrative system adapted to a new client: editorial cover, numbered table of contents, executive-summary blocks, delivery roadmap, commercials, team, and proof sections using the client brand tokens.',
+    accentPreview: ['#111111', '#6a6a6a', '#f5f5f5', '#ffffff'],
+    colorWeight: 'light',
+    layoutDensity: 'spacious',
+    typeScale: 'editorial',
+    accentUsage: 'moderate',
+    preview: {
+      heroStyle: 'Full-viewport editorial cover using the client brand accent',
+      sectionLayout: 'Scroll-driven Journey structure populated from uploaded documents',
+      navStyle: 'Sticky numbered table of contents with branded progress rule',
+    },
+    isAvailable: (tokens: BrandTokens) => tokens.clientSlug?.toLowerCase() !== 'lilly',
     CardPreview: CatalyzeCard,
     FullSite: CatalyzeFull,
   },
@@ -90,24 +108,6 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
     },
     CardPreview: BoldCard,
     FullSite: BoldFull,
-  },
-  [TEMPLATE_IDS.WARM_PARTNERSHIP]: {
-    id: TEMPLATE_IDS.WARM_PARTNERSHIP,
-    label: 'Pavilion',
-    description:
-      'Aesop × Apple Retail, warmed for pharma. Alternating white → rose-tint → cream-tint surfaces with 160px vertical padding, centered Garamond italic hero flanked by gold hairlines, and 4:5 portrait grids. Prioritizes trust and collaboration over technical authority.',
-    accentPreview: ['#daaa00', '#501009', '#fcf5ed', '#f9f0e0'],
-    colorWeight: 'light',
-    layoutDensity: 'balanced',
-    typeScale: 'classic',
-    accentUsage: 'moderate',
-    preview: {
-      heroStyle: 'Centered serif hero with gold accent hairline and two-tone CTAs',
-      sectionLayout: 'Rounded soft-shadowed cards in rose-neutral sections with photo trios',
-      navStyle: 'Warm translucent nav with outlined gold CTA',
-    },
-    CardPreview: WarmCard,
-    FullSite: WarmFull,
   },
 }
 

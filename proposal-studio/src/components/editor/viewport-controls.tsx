@@ -2,13 +2,11 @@
 
 import {
   ChevronDown,
-  Maximize2,
   Monitor,
   RotateCw,
   Smartphone,
   Tablet,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -16,11 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { EditorTooltip } from './editor-tooltip'
 
 export type ViewportMode = 'desktop' | 'tablet' | 'mobile' | 'fullscreen'
 
@@ -29,6 +23,7 @@ interface ViewportControlsProps {
   onViewportChange: (viewport: ViewportMode) => void
   url?: string
   onRefresh?: () => void
+  onToggleFullscreen?: () => void
 }
 
 const VIEWPORT_META: Record<
@@ -56,22 +51,23 @@ export function ViewportControls({
       ? VIEWPORT_META.desktop
       : VIEWPORT_META[activeViewport]
   const ViewportIcon = currentMeta.icon
-
   return (
-    <div className="flex h-7 w-[320px] items-center gap-0.5 rounded-full border border-foreground/10 bg-muted px-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+    <div className="flex h-7 w-full max-w-[320px] items-center gap-0.5 rounded-full border border-foreground/10 bg-muted px-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
       {/* Viewport dropdown */}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="xs"
-            aria-label="Viewport size"
-            className="h-5 gap-0.5 rounded-full px-1.5 text-muted-foreground hover:bg-background/60 hover:text-foreground"
-          >
-            <ViewportIcon className="size-3.5" />
-            <ChevronDown className="size-3 opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
+        <EditorTooltip label="Change viewport size">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="xs"
+              aria-label="Viewport size"
+              className="h-5 gap-0.5 rounded-full px-1.5 text-muted-foreground hover:bg-background/60 hover:text-foreground"
+            >
+              <ViewportIcon className="size-3.5" />
+              <ChevronDown className="size-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+        </EditorTooltip>
         <DropdownMenuContent
           align="start"
           className="min-w-[180px] bg-popover before:hidden"
@@ -100,40 +96,18 @@ export function ViewportControls({
       </span>
 
       {/* Inline actions */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={onRefresh}
-            aria-label="Refresh preview"
-            className="rounded-full text-muted-foreground hover:bg-background/60 hover:text-foreground"
-          >
-            <RotateCw className="size-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Refresh</TooltipContent>
-      </Tooltip>
+      <EditorTooltip label="Refresh preview">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={onRefresh}
+          aria-label="Refresh preview"
+          className="rounded-full text-muted-foreground hover:bg-background/60 hover:text-foreground"
+        >
+          <RotateCw className="size-3.5" />
+        </Button>
+      </EditorTooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onViewportChange('fullscreen')}
-            aria-label="Fullscreen"
-            aria-pressed={activeViewport === 'fullscreen'}
-            className={cn(
-              'rounded-full text-muted-foreground hover:bg-background/60 hover:text-foreground',
-              activeViewport === 'fullscreen' &&
-                'bg-background text-foreground shadow-sm ring-1 ring-foreground/10',
-            )}
-          >
-            <Maximize2 className="size-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Fullscreen</TooltipContent>
-      </Tooltip>
     </div>
   )
 }

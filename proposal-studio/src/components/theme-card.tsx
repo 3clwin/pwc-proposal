@@ -89,8 +89,18 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
   const accents = pickAccentDots(theme)
 
   return (
-    <button
-      type="button"
+    // Rendered as `div[role="button"]` rather than a native `<button>` because
+    // the preview subtree includes a live-site `JourneyNav` that itself
+    // contains real <button> elements (DropdownMenuTrigger, Return-to-cover).
+    // Nesting <button> inside <button> is invalid HTML and triggers a
+    // hydration error in React 19. We're fully keyboard-accessible — the
+    // Enter / Space handlers below match native button semantics, and
+    // `aria-pressed` tells screen readers whether this theme is selected.
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Select ${theme.label} theme`}
       onClick={() => onSelect(theme)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -99,8 +109,9 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
         }
       }}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-2xl bg-white text-left transition-all duration-300',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white text-left transition-all duration-300',
         'border hover:-translate-y-0.5',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary focus-visible:ring-offset-2',
         isSelected
           ? 'border-app-primary shadow-[0_8px_24px_rgba(255,170,114,0.18)] ring-1 ring-app-primary/30'
           : 'border-[#e5e5e3] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-[#d4d4d0] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)]',
@@ -133,6 +144,11 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
             'relative h-[300px] isolate overflow-hidden rounded-xl bg-white transition-shadow duration-300',
             'border border-[#e5e5e3] shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
           )}
+          // Exposes the thumbnail's corner radius to the nested
+          // BrowserChrome so its clip-path can mask the scaled preview
+          // subtree to the exact same rounded geometry. Keep this in
+          // sync with the `rounded-xl` utility above (Tailwind 12px).
+          style={{ ['--thumb-radius' as string]: '12px' }}
         >
           {Preview ? <Preview /> : <FallbackPreview theme={theme} />}
         </div>
@@ -164,6 +180,6 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
           </span>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

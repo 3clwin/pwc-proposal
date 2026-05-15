@@ -30,6 +30,7 @@ import { useProject } from '@/context/project-context'
 import type { SiteSection } from '@/types'
 import type { ExecSummaryBlock } from '@/templates/catalyze-journey/sections/executive-summary.schema'
 import { AddBlockMenu } from './add-block-menu'
+import { EditorTooltip } from './editor-tooltip'
 
 /**
  * Left-rail inspector for the editor. Shows every section in the
@@ -112,19 +113,25 @@ export function SectionsSidebar() {
       </div>
 
       <div className="border-t border-border p-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2 rounded-md"
-          disabled
-          title="Add section — coming soon"
+        <EditorTooltip
+          label="Add section — coming soon"
+          side="top"
+          disabledTrigger
+          triggerClassName="flex w-full"
         >
-          <Plus className="size-4" />
-          Add section
-          <span className="ml-auto text-[10px] text-muted-foreground">
-            soon
-          </span>
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 rounded-md"
+            disabled
+          >
+            <Plus className="size-4" />
+            Add section
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              soon
+            </span>
+          </Button>
+        </EditorTooltip>
       </div>
     </div>
   )
@@ -168,36 +175,39 @@ function SortableSection({ section }: { section: SiteSection }) {
       className="rounded-md border border-transparent hover:border-border"
     >
       <div className="flex items-center gap-1 px-1 py-1">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          aria-label="Drag to reorder"
-          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted"
-        >
-          <GripVertical className="size-3.5" />
-        </button>
-
-        {editable ? (
+        <EditorTooltip label="Drag to reorder">
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Collapse' : 'Expand'}
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+            {...attributes}
+            {...listeners}
+            aria-label="Drag to reorder"
+            className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {open ? (
-              <ChevronDown className="size-3.5" />
-            ) : (
-              <ChevronRight className="size-3.5" />
-            )}
+            <GripVertical className="size-3.5" />
           </button>
+        </EditorTooltip>
+
+        {editable ? (
+          <EditorTooltip label={open ? 'Collapse section' : 'Expand section'}>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? 'Collapse section' : 'Expand section'}
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {open ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+            </button>
+          </EditorTooltip>
         ) : (
-          <span
-            className="inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground/60"
-            title="Read-only — schema not yet defined"
-          >
-            <Lock className="size-3" />
-          </span>
+          <EditorTooltip label="Read-only — schema not yet defined">
+            <span className="inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground/60">
+              <Lock className="size-3" />
+            </span>
+          </EditorTooltip>
         )}
 
         <button
@@ -210,31 +220,35 @@ function SortableSection({ section }: { section: SiteSection }) {
 
         {editable && (
           <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={() =>
-                dispatch({ type: 'DUPLICATE_SECTION', payload: { id: section.id } })
-              }
-              aria-label="Duplicate section"
-              className="text-muted-foreground opacity-0 transition group-hover:opacity-100"
-            >
-              <Copy className="size-3" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                if (!window.confirm(`Delete section "${section.label}"?`)) return
-                dispatch({ type: 'DELETE_SECTION', payload: { id: section.id } })
-              }}
-              aria-label="Delete section"
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="size-3" />
-            </Button>
+            <EditorTooltip label="Duplicate section">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() =>
+                  dispatch({ type: 'DUPLICATE_SECTION', payload: { id: section.id } })
+                }
+                aria-label="Duplicate section"
+                className="text-muted-foreground opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+              >
+                <Copy className="size-3" />
+              </Button>
+            </EditorTooltip>
+            <EditorTooltip label="Delete section">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => {
+                  if (!window.confirm(`Delete section "${section.label}"?`)) return
+                  dispatch({ type: 'DELETE_SECTION', payload: { id: section.id } })
+                }}
+                aria-label="Delete section"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="size-3" />
+              </Button>
+            </EditorTooltip>
           </>
         )}
       </div>
@@ -352,15 +366,17 @@ function SortableBlockRow({
         'group/row flex items-center gap-1 rounded-md px-1 py-1 text-xs hover:bg-muted/50',
       )}
     >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label="Drag to reorder"
-        className="inline-flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted"
-      >
-        <GripVertical className="size-3" />
-      </button>
+      <EditorTooltip label="Drag to reorder">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder"
+          className="inline-flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <GripVertical className="size-3" />
+        </button>
+      </EditorTooltip>
       <button
         type="button"
         onClick={scrollToBlock}
@@ -372,36 +388,40 @@ function SortableBlockRow({
         </span>
         <span className="ml-2">{label}</span>
       </button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        onClick={() =>
-          dispatch({
-            type: 'DUPLICATE_BLOCK',
-            payload: { sectionId, blockId: block.id },
-          })
-        }
-        aria-label="Duplicate block"
-        className="text-muted-foreground opacity-0 transition group-hover/row:opacity-100"
-      >
-        <Copy className="size-3" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        onClick={() =>
-          dispatch({
-            type: 'DELETE_BLOCK',
-            payload: { sectionId, blockId: block.id },
-          })
-        }
-        aria-label="Delete block"
-        className="text-muted-foreground opacity-0 transition group-hover/row:opacity-100 hover:text-destructive"
-      >
-        <Trash2 className="size-3" />
-      </Button>
+      <EditorTooltip label="Duplicate block">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() =>
+            dispatch({
+              type: 'DUPLICATE_BLOCK',
+              payload: { sectionId, blockId: block.id },
+            })
+          }
+          aria-label="Duplicate block"
+          className="text-muted-foreground opacity-0 transition group-hover/row:opacity-100 focus-visible:opacity-100"
+        >
+          <Copy className="size-3" />
+        </Button>
+      </EditorTooltip>
+      <EditorTooltip label="Delete block">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() =>
+            dispatch({
+              type: 'DELETE_BLOCK',
+              payload: { sectionId, blockId: block.id },
+            })
+          }
+          aria-label="Delete block"
+          className="text-muted-foreground opacity-0 transition group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      </EditorTooltip>
     </div>
   )
 }
@@ -430,6 +450,8 @@ function blockLabel(block: ExecSummaryBlock): string {
     default:
       return ''
   }
+
+  return 'Unknown block'
 }
 
 function truncate(s: string, n: number): string {

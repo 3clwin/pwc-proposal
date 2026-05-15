@@ -469,7 +469,7 @@ export function IntakeFields({
             <Input
               id="clientContact"
               type="email"
-              placeholder="jane@stripe.com"
+              placeholder="jane@lilly.com"
               value={fields.clientContact}
               onChange={(e) => update({ clientContact: e.target.value })}
               readOnly={readOnly}

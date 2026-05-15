@@ -36,10 +36,10 @@ export interface TemplateDefinition {
 
 export const TEMPLATE_IDS = {
   CATALYZE_JOURNEY: 'catalyze-journey',
+  JOURNEY_ADAPTED: 'journey-adapted',
   CLINICAL_AUTHORITY: 'clinical-authority',
   EDITORIAL_SCIENCE: 'editorial-science',
   BOLD_MOMENTUM: 'bold-momentum',
-  WARM_PARTNERSHIP: 'warm-partnership',
 } as const
 
 export type TemplateId = (typeof TEMPLATE_IDS)[keyof typeof TEMPLATE_IDS]

@@ -13,6 +13,65 @@ const DEFAULT_MODELS: Record<LLMProvider, string> = {
   google: 'gemini-3.1-pro-preview',
 }
 
+const PROVIDER_ENV: Record<
+  LLMProvider,
+  { keyNames: string[]; modelName: string; label: string }
+> = {
+  anthropic: {
+    keyNames: ['ANTHROPIC_API_KEY'],
+    modelName: 'ANTHROPIC_MODEL',
+    label: 'Claude',
+  },
+  openai: {
+    keyNames: ['OPENAI_API_KEY'],
+    modelName: 'OPENAI_MODEL',
+    label: 'OpenAI',
+  },
+  google: {
+    keyNames: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
+    modelName: 'GOOGLE_MODEL',
+    label: 'Gemini',
+  },
+}
+
+function readEnvProvider(provider: LLMProvider): ResolvedLLMConfig | null {
+  const env = PROVIDER_ENV[provider]
+  const apiKey = env.keyNames.map((name) => process.env[name]).find(Boolean)
+  if (!apiKey) return null
+  return {
+    provider,
+    apiKey,
+    model: process.env[env.modelName] || DEFAULT_MODELS[provider],
+    source: 'env',
+  }
+}
+
+export function getLLMEnvironmentStatus() {
+  const providers = (Object.keys(PROVIDER_ENV) as LLMProvider[]).map((provider) => {
+    const env = PROVIDER_ENV[provider]
+    const configuredKeyName = env.keyNames.find((name) => Boolean(process.env[name]))
+    return {
+      provider,
+      label: env.label,
+      configured: Boolean(configuredKeyName),
+      keyNames: env.keyNames,
+      configuredKeyName,
+      model: process.env[env.modelName] || DEFAULT_MODELS[provider],
+      modelEnvName: env.modelName,
+    }
+  })
+
+  const active = (['anthropic', 'openai', 'google'] as LLMProvider[]).find((provider) =>
+    providers.find((p) => p.provider === provider && p.configured)
+  )
+
+  return {
+    providers,
+    defaultProvider: active ?? null,
+    defaultModel: active ? providers.find((p) => p.provider === active)?.model ?? null : null,
+  }
+}
+
 /**
  * Resolve the LLM provider to use for a request.
  *
@@ -39,29 +98,20 @@ export function resolveLLMConfig(request: Request): ResolvedLLMConfig | null {
     }
   }
 
-  if (process.env.ANTHROPIC_API_KEY) {
-    return {
-      provider: 'anthropic',
-      apiKey: process.env.ANTHROPIC_API_KEY,
-      model: process.env.ANTHROPIC_MODEL || DEFAULT_MODELS.anthropic,
-      source: 'env',
+  if (headerProvider) {
+    const requested = readEnvProvider(headerProvider)
+    if (requested) {
+      return {
+        ...requested,
+        model: headerModel || requested.model,
+      }
     }
   }
-  if (process.env.OPENAI_API_KEY) {
-    return {
-      provider: 'openai',
-      apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL || DEFAULT_MODELS.openai,
-      source: 'env',
-    }
-  }
-  const googleKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY
-  if (googleKey) {
-    return {
-      provider: 'google',
-      apiKey: googleKey,
-      model: process.env.GOOGLE_MODEL || DEFAULT_MODELS.google,
-      source: 'env',
+
+  for (const provider of ['anthropic', 'openai', 'google'] as LLMProvider[]) {
+    const config = readEnvProvider(provider)
+    if (config) {
+      return config
     }
   }
 

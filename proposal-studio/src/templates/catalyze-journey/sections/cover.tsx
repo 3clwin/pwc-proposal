@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { DisplayTitle } from '../../shared/typography'
 import { PremiumCTA } from '../../shared/premium-cta'
 import { Logo } from '@/components/logo'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { EASE_OUT_EDITORIAL } from '../../shared/motion'
 
 interface CoverSectionProps {
@@ -58,7 +58,7 @@ function findScrollingAncestor(el: HTMLElement | null): HTMLElement | null {
  */
 export function CoverSection({ onBegin }: CoverSectionProps = {}) {
   const reduce = useReducedMotion()
-  const { cover } = CATALYZE_JOURNEY_CONTENT
+  const { cover } = useJourneyContent()
 
   const sectionRef = useRef<HTMLElement | null>(null)
   // `null` means "measurement hasn't run yet" — we render with 100dvh so
@@ -144,7 +144,7 @@ export function CoverSection({ onBegin }: CoverSectionProps = {}) {
           responsive padding — no centering. The inner content capped to
           max-w-[820px] so the title never stretches into unreadable
           widths on ultra-wide screens. */}
-      <div className="relative z-10 flex flex-1 flex-col px-6 py-10 text-white sm:px-10 lg:px-16 lg:py-14">
+      <div className="relative z-10 flex flex-1 flex-col px-6 py-10 text-white @sm:px-10 @lg:px-16 @lg:py-14 sm:px-10 lg:px-16 lg:py-14">
         {/* Top meta row — PwC logo only */}
         <motion.div
           className="flex items-start"

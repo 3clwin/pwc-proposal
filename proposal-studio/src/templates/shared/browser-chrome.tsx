@@ -38,8 +38,20 @@ export function BrowserChrome({
 }: BrowserChromeProps) {
   return (
     <div
-      className="browser-chrome relative flex h-full w-full flex-col overflow-hidden"
-      style={{ backgroundColor: viewportBg, ...style }}
+      className="browser-chrome relative flex h-full w-full flex-col overflow-hidden rounded-[inherit]"
+      style={{
+        backgroundColor: viewportBg,
+        ...style,
+        // Enforce a geometric mask on this stacking context. `overflow:hidden`
+        // alone does not reliably clip a GPU-composited subtree (e.g. our
+        // scaled `transform: scale(x)` preview root) to the parent's rounded
+        // corners in Chromium on macOS. `clip-path: inset(0 round <radius>)`
+        // forces the composited layer to honor the rounded mask so site
+        // content never bleeds past the top-left / top-right / bottom
+        // corners of the thumbnail frame. Keep this spread LAST so a
+        // caller can't accidentally override the clip.
+        clipPath: 'inset(0 round var(--thumb-radius, 12px))',
+      }}
     >
       {/* Disable sticky/fixed positioning on anything inside the preview
           so the real site's sticky nav doesn't follow the parent page's
@@ -59,8 +71,11 @@ export function BrowserChrome({
       `}</style>
       {/* Viewport */}
       <div
-        className="relative flex-1 overflow-hidden"
-        style={{ backgroundColor: viewportBg }}
+        className="relative flex-1 overflow-hidden rounded-[inherit]"
+        style={{
+          backgroundColor: viewportBg,
+          clipPath: 'inset(0 round var(--thumb-radius, 12px))',
+        }}
       >
         {children}
       </div>

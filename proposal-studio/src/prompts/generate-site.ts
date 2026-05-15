@@ -22,7 +22,7 @@ Theme direction: ${theme.label} — ${theme.description}
 - Type scale: ${theme.typeScale}
 - Accent usage: ${theme.accentUsage}
 
-Generate a complete proposal site with these sections. Return ONLY valid JSON with no markdown fences:
+Generate a complete proposal site that can be adapted into the Journey template structure currently used by the Lilly demo. Keep the content client-specific and avoid Lilly-specific language unless the RFP is actually for Lilly. Return ONLY valid JSON with no markdown fences:
 {
   "metadata": {
     "title": "Proposal title",
@@ -50,7 +50,8 @@ Generate a complete proposal site with these sections. Return ONLY valid JSON wi
   ]
 }
 
-Include these section types in order: hero, executive-summary, approach, methodology, team, timeline, pricing, case-studies, contact.
+Include these section types in order: hero, executive-summary, approach, methodology, timeline, pricing, team, case-studies, contact.
 Each section must have a unique id (use format "section-1", "section-2", etc.), meaningful content relevant to the RFP, and style properties using the brand colors.
+For approach, methodology, timeline, pricing, team, and case-studies, include 3-6 content.items with specific titles and descriptions so the Journey adapter can populate the executive-summary bento, roadmap, commercials, team, and proof sections.
 Write professional, persuasive proposal content. Be specific and detailed.`
 }

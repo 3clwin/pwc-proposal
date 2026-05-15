@@ -13,7 +13,7 @@ import { OpmodelWorkstreamDiagram } from '../components/opmodel-workstream-diagr
 import { ImplementationTimelineDiagram } from '../components/implementation-timeline-diagram'
 import { FutureStateArchitectureDiagram } from '../components/future-state-architecture-diagram'
 import { IterativeReleaseDiagram } from '../components/iterative-release-diagram'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -26,7 +26,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  *   e · Future-state architecture highlights
  */
 export function DeliverySection() {
-  const { delivery } = CATALYZE_JOURNEY_CONTENT
+  const { delivery } = useJourneyContent()
 
   return (
     <section id="delivery" className="relative border-t border-foreground/5 bg-gradient-to-b from-foreground/[0.02] to-white py-24 sm:py-32">
@@ -78,7 +78,7 @@ export function DeliverySection() {
             initial="hidden"
             whileInView="show"
             viewport={VIEWPORT_ONCE}
-            className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3"
+            className="mt-12 grid grid-cols-1 gap-6"
           >
             {delivery.sprintZero.phases.map((phase, i) => {
               const last = i === delivery.sprintZero.phases.length - 1

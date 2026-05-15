@@ -1,7 +1,7 @@
 import type { BrandTokens, ThemeVariant, SiteContent } from '@/types'
 
 export const CRAWL_DURATION_MS = 8500
-export const GENERATION_DURATION_MS = 2000
+export const GENERATION_DURATION_MS = 0
 
 export const LILLY_BRAND_TOKENS: BrandTokens = {
   clientSlug: 'lilly',

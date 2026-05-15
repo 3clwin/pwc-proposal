@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Undo2, Redo2, PanelLeftClose, PanelLeftOpen, Paintbrush, X } from 'lucide-react'
+import { Undo2, Redo2, PanelLeftClose, PanelLeftOpen, Paintbrush, X, Loader2, CheckCircle2, ExternalLink } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
@@ -13,23 +14,137 @@ import { ViewportControls, type ViewportMode } from './viewport-controls'
 import { DesignModeOverlay } from './design-mode-overlay'
 import { BlockOverlay } from './block-overlay'
 import { SectionsSidebar } from './sections-sidebar'
+import { EditorTooltip } from './editor-tooltip'
+import { RiskModal } from '@/components/editor/risk-modal'
+import { DeploySuccessModal } from '@/components/editor/deploy-success-modal'
 import { SiteRenderer } from '@/components/generated-site/site-renderer'
 import { useProject } from '@/context/project-context'
-import {
-  LILLY_SITE_CONTENT,
-  GENERATION_DURATION_MS,
-} from '@/data/lilly-proposal'
+import { useLLM } from '@/context/llm-context'
+import { LILLY_SITE_CONTENT } from '@/data/lilly-proposal'
+import type { RiskFlag } from '@/types'
 
 export function EditorLayout() {
   const router = useRouter()
-  const { project, dispatch, canUndo, canRedo } = useProject()
+  const { project, dispatch, canUndo, canRedo, hydrated } = useProject()
+  const { activeProvider, activeModel, activeApiKey } = useLLM()
   const [viewport, setViewport] = useState<ViewportMode>('desktop')
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  )
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [designMode, setDesignMode] = useState(false)
   const [previewKey, setPreviewKey] = useState(0)
+  const [inspectorHost, setInspectorHost] = useState<HTMLElement | null>(null)
   const previewContentRef = useRef<HTMLDivElement>(null)
+  const previousViewportRef = useRef<Exclude<ViewportMode, 'fullscreen'>>('desktop')
+  const generationStartedRef = useRef(false)
+  const lillyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Deploy state
+  const [scanning, setScanning] = useState(false)
+  const [riskFlags, setRiskFlags] = useState<RiskFlag[]>([])
+  const [showRiskModal, setShowRiskModal] = useState(false)
+  const [deploying, setDeploying] = useState(false)
+  const [successModalOpen, setSuccessModalOpen] = useState(false)
+  const deployInFlight = useRef(false)
+
+  const deployedUrl = project.deploymentUrl
+  const hasDeployed = Boolean(deployedUrl)
+
+  async function handleDeployClick() {
+    if (hasDeployed) {
+      setSuccessModalOpen(true)
+      return
+    }
+    if (!project.siteContent || scanning || deploying || deployInFlight.current) return
+
+    setScanning(true)
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-llm-provider': activeProvider,
+        'x-llm-model': activeModel,
+      }
+      if (activeApiKey) {
+        headers['x-llm-api-key'] = activeApiKey
+      }
+
+      const res = await fetch('/api/scan-risk', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ siteContent: project.siteContent }),
+      })
+
+      const data = (await res.json()) as { flags?: RiskFlag[]; error?: string }
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Risk scan failed')
+        return
+      }
+
+      const flags = data.flags ?? []
+      setRiskFlags(flags)
+
+      if (flags.length === 0) {
+        await executeDeploy()
+      } else {
+        setShowRiskModal(true)
+      }
+    } catch {
+      toast.error('Risk scan failed')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  function handleResolveFlag(flagId: string, status: 'dismissed' | 'resolved') {
+    setRiskFlags((prev) => prev.map((f) => (f.id === flagId ? { ...f, status } : f)))
+    dispatch({ type: 'RESOLVE_RISK_FLAG', payload: { id: flagId, status } })
+  }
+
+  async function executeDeploy() {
+    if (!project.siteContent || !project.brandTokens) return
+    if (hasDeployed) {
+      setShowRiskModal(false)
+      setSuccessModalOpen(true)
+      return
+    }
+    if (deployInFlight.current) return
+    deployInFlight.current = true
+
+    setDeploying(true)
+    setShowRiskModal(false)
+
+    try {
+      const res = await fetch('/api/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteContent: project.siteContent,
+          brandTokens: project.brandTokens,
+          projectName: `ps-${project.clientSlug || project.id}`,
+          projectId: project.id,
+        }),
+      })
+
+      const data = (await res.json()) as { url?: string; error?: string }
+
+      if (!res.ok || !data.url) {
+        toast.error(data.error ?? 'Deployment failed')
+        return
+      }
+
+      dispatch({ type: 'SET_DEPLOYMENT_URL', payload: data.url })
+      setSuccessModalOpen(true)
+      toast.success('Deployed successfully')
+    } catch {
+      toast.error('Deployment failed')
+    } finally {
+      setDeploying(false)
+      deployInFlight.current = false
+    }
+  }
 
   const undo = useCallback(() => {
     if (!canUndo) return
@@ -79,24 +194,111 @@ export function EditorLayout() {
     : project.clientSlug
       ? `proposal.studio/p/${project.clientSlug}`
       : 'proposal.studio/preview'
+  const { brandTokens, selectedTheme, siteContent, uploadedFiles } = project
 
-  // Simulated "agent is building" state. The content is hardcoded in
-  // `LILLY_SITE_CONTENT` — this is a demo flow, not a real LLM call.
-  // We run a single client-side timer: shimmer shows for
-  // `GENERATION_DURATION_MS`, then dispatch the static content and
-  // the AnimatePresence below crossfades to the cover.
+  // Build content. Lilly gets instant client-side content (no API round
+  // trip); all other clients go through the server generation endpoint.
   useEffect(() => {
-    if (project.siteContent) return
-    if (!project.selectedTheme || !project.brandTokens) {
+    if (!hydrated) return
+    if (siteContent) return
+    if (!selectedTheme || !brandTokens) {
       router.push('/theme')
       return
     }
-    const timer = setTimeout(() => {
-      dispatch({ type: 'SET_SITE_CONTENT', payload: LILLY_SITE_CONTENT })
-    }, GENERATION_DURATION_MS)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (generationStartedRef.current) return
+    generationStartedRef.current = true
+
+    // Lilly fast path — content is local, but we still show the shimmer
+    // for a few seconds so the build feels intentional. The timer is
+    // stored in a ref so effect re-runs (React Strict Mode, dep changes)
+    // don't clear it via the cleanup function.
+    if (brandTokens.clientSlug?.toLowerCase().includes('lilly')) {
+      if (!lillyTimerRef.current) {
+        lillyTimerRef.current = setTimeout(() => {
+          lillyTimerRef.current = null
+          dispatch({ type: 'SET_SITE_CONTENT', payload: LILLY_SITE_CONTENT })
+        }, 4500)
+      }
+      return
+    }
+
+    const controller = new AbortController()
+
+    async function generateSite() {
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (activeApiKey) {
+          headers['x-llm-provider'] = activeProvider
+          headers['x-llm-api-key'] = activeApiKey
+          headers['x-llm-model'] = activeModel
+        } else {
+          headers['x-llm-provider'] = activeProvider
+          headers['x-llm-model'] = activeModel
+        }
+
+        const rfpText = uploadedFiles
+          .map((file) => {
+            const text = file.extractedText?.trim()
+            return text ? `# ${file.name}\n${text}` : ''
+          })
+          .filter(Boolean)
+          .join('\n\n---\n\n')
+
+        const res = await fetch('/api/generate-site', {
+          method: 'POST',
+          headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            rfpText,
+            tokens: brandTokens,
+            theme: selectedTheme,
+          }),
+        })
+
+        const data = await res.json() as {
+          site?: typeof siteContent
+          error?: string
+        }
+
+        if (!res.ok || !data.site) {
+          toast.error(data.error ?? 'Site generation failed')
+          return
+        }
+
+        dispatch({ type: 'SET_SITE_CONTENT', payload: data.site })
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        toast.error('Site generation failed')
+      }
+    }
+
+    generateSite()
+    return () => controller.abort()
+  }, [
+    activeApiKey,
+    activeModel,
+    activeProvider,
+    dispatch,
+    hydrated,
+    brandTokens,
+    selectedTheme,
+    siteContent,
+    uploadedFiles,
+    router,
+  ])
+
+  // Clean up the Lilly timer on true unmount.
+  useEffect(() => {
+    return () => {
+      if (lillyTimerRef.current) {
+        clearTimeout(lillyTimerRef.current)
+        lillyTimerRef.current = null
+      }
+    }
   }, [])
+
+  // Transition to the cover as soon as content is ready — no artificial delay.
+  const minDurationElapsed = true
 
   const handleSectionClick = useCallback((sectionId: string) => {
     setSelectedSection((prev) => (prev === sectionId ? null : sectionId))
@@ -105,6 +307,31 @@ export function EditorLayout() {
   const handleSectionHover = useCallback((sectionId: string | null) => {
     setHoveredSection(sectionId)
   }, [])
+
+  useEffect(() => {
+    if (viewport !== 'fullscreen') {
+      previousViewportRef.current = viewport
+    }
+  }, [viewport])
+
+  const handleFullscreenToggle = useCallback(() => {
+    setViewport((current) =>
+      current === 'fullscreen' ? previousViewportRef.current : 'fullscreen',
+    )
+  }, [])
+
+  useEffect(() => {
+    if (viewport !== 'fullscreen') return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setViewport(previousViewportRef.current)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [viewport])
 
   const viewportWidth =
     viewport === 'tablet'
@@ -115,83 +342,163 @@ export function EditorLayout() {
 
   const isFullscreen = viewport === 'fullscreen'
   const showChat = !collapsed && !isFullscreen
+  const showInspector = designMode && !isFullscreen
   // `isBuilding` gates the preview content: while true, we render a
   // cover-shaped shimmer skeleton in place of the real template.
   // The rest of the editor chrome (chat, preview header) stays live
-  // so users don't feel locked out.
-  const isBuilding = !project.siteContent
+  // so users don't feel locked out. The min-duration guard guarantees
+  // the shimmer plays for the full generation window every time the
+  // user starts a new build. Pre-hydration we also treat the editor
+  // as "building" so persisted content can land before we decide.
+  const isBuilding = !hydrated || !project.siteContent || !minDurationElapsed
+  const chatToggleLabel = collapsed ? 'Show chat panel' : 'Hide chat panel'
 
   return (
     <div className="fixed inset-x-0 top-14 bottom-0 flex overflow-hidden">
-      {showChat && (
-        <div className="flex w-1/5 min-w-[280px] shrink-0 flex-col overflow-hidden border-r border-border bg-card">
-          {designMode ? <SectionsSidebar /> : <AIChat />}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {showChat && (
+          <motion.aside
+            key="editor-left-rail"
+            initial={{ width: 0, minWidth: 0, x: -24, opacity: 0 }}
+            animate={{ width: '20%', minWidth: 280, x: 0, opacity: 1 }}
+            exit={{ width: 0, minWidth: 0, x: -24, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 36, mass: 0.8 }}
+            className={cn(
+              'flex shrink-0 flex-col overflow-hidden border-r border-border bg-card',
+              'absolute inset-y-0 left-0 z-30 w-[85%] max-w-[320px] shadow-xl',
+              'md:relative md:z-auto md:w-auto md:max-w-none md:shadow-none',
+            )}
+          >
+            {designMode ? <SectionsSidebar /> : <AIChat />}
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Backdrop for mobile chat overlay */}
+      <AnimatePresence>
+        {showChat && (
+          <motion.div
+            key="chat-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 z-20 bg-black/20 md:hidden"
+            onClick={() => setCollapsed(true)}
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-1 flex-col overflow-hidden bg-muted">
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-card px-3">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="size-4 text-muted-foreground" />
-              ) : (
-                <PanelLeftClose className="size-4 text-muted-foreground" />
-              )}
-            </Button>
+            <EditorTooltip label={chatToggleLabel}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setCollapsed(!collapsed)}
+                aria-label={chatToggleLabel}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="size-4 text-muted-foreground" />
+                ) : (
+                  <PanelLeftClose className="size-4 text-muted-foreground" />
+                )}
+              </Button>
+            </EditorTooltip>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 sm:flex">
             <ViewportControls
               activeViewport={viewport}
               onViewportChange={setViewport}
               url={previewUrl}
               onRefresh={() => setPreviewKey((k) => k + 1)}
+              onToggleFullscreen={handleFullscreenToggle}
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-0 sm:flex">
+              <EditorTooltip label="Undo (⌘Z)" disabledTrigger={!canUndo}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  aria-label="Undo"
+                >
+                  <Undo2 className="size-4 text-muted-foreground" />
+                </Button>
+              </EditorTooltip>
+              <EditorTooltip label="Redo (⌘⇧Z)" disabledTrigger={!canRedo}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  aria-label="Redo"
+                >
+                  <Redo2 className="size-4 text-muted-foreground" />
+                </Button>
+              </EditorTooltip>
+            </div>
             <DesignModeToggle
               active={designMode}
               onToggle={() => setDesignMode((v) => !v)}
             />
-            <div className="flex items-center gap-0">
+            {hasDeployed ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setSuccessModalOpen(true)}
+                  className="gap-1.5"
+                >
+                  <CheckCircle2 className="size-4 text-emerald-600" data-icon="inline-start" />
+                  <span className="hidden xs:inline">Deployed</span>
+                </Button>
+                <Button size="sm" variant="outline" asChild className="hidden sm:inline-flex">
+                  <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-4" data-icon="inline-start" />
+                    View site
+                  </a>
+                </Button>
+              </>
+            ) : (
               <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={undo}
-                disabled={!canUndo}
-                aria-label="Undo"
-                title="Undo (⌘Z)"
+                size="sm"
+                onClick={handleDeployClick}
+                disabled={scanning || deploying || !project.siteContent}
               >
-                <Undo2 className="size-4 text-muted-foreground" />
+                {(scanning || deploying) && (
+                  <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
+                )}
+                {scanning ? 'Scanning…' : deploying ? 'Deploying…' : 'Deploy'}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={redo}
-                disabled={!canRedo}
-                aria-label="Redo"
-                title="Redo (⌘⇧Z)"
-              >
-                <Redo2 className="size-4 text-muted-foreground" />
-              </Button>
-            </div>
+            )}
           </div>
         </div>
 
         <ScrollArea className="editor-preview-scroll min-h-0 flex-1">
           <div className="relative">
-            <div
+            <motion.div
+              layout
               ref={previewContentRef}
               className={cn(
-                'mx-auto bg-card transition-all duration-300',
+                'mx-auto bg-card transition-[box-shadow] duration-300',
+                isFullscreen && 'min-h-[calc(100vh-100px)] overflow-y-auto',
                 designMode && 'select-none',
               )}
+              transition={{
+                layout: {
+                  type: 'spring',
+                  stiffness: 180,
+                  damping: 24,
+                  mass: 0.8,
+                },
+              }}
               style={{
                 maxWidth: viewportWidth,
                 boxShadow:
@@ -235,10 +542,11 @@ export function EditorLayout() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
             <DesignModeOverlay
               active={designMode && !isBuilding}
               contentRef={previewContentRef}
+              inspectorHost={inspectorHost}
               onExit={() => setDesignMode(false)}
             />
             <BlockOverlay
@@ -248,6 +556,38 @@ export function EditorLayout() {
           </div>
         </ScrollArea>
       </div>
+
+      <AnimatePresence initial={false}>
+        {showInspector && (
+          <motion.aside
+            key="design-inspector-rail"
+            ref={setInspectorHost}
+            initial={{ width: 0, x: 32, opacity: 0 }}
+            animate={{ width: 360, x: 0, opacity: 1 }}
+            exit={{ width: 0, x: 32, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 36, mass: 0.8 }}
+            className="flex shrink-0 flex-col overflow-hidden border-l border-border bg-card"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Risk modal */}
+      <RiskModal
+        open={showRiskModal}
+        onClose={() => setShowRiskModal(false)}
+        flags={riskFlags}
+        onResolve={handleResolveFlag}
+        onDeploy={executeDeploy}
+        deploying={deploying}
+      />
+
+      {deployedUrl && (
+        <DeploySuccessModal
+          open={successModalOpen}
+          onClose={() => setSuccessModalOpen(false)}
+          url={deployedUrl}
+        />
+      )}
     </div>
   )
 }
@@ -266,16 +606,17 @@ function DesignModeToggle({
 }) {
   if (!active) {
     return (
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={onToggle}
-        aria-pressed={false}
-        title="Design Mode"
-        aria-label="Enter Design Mode"
-      >
-        <Paintbrush className="size-4 text-muted-foreground" />
-      </Button>
+      <EditorTooltip label="Enter Design Mode">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onToggle}
+          aria-pressed={false}
+          aria-label="Enter Design Mode"
+        >
+          <Paintbrush className="size-4 text-muted-foreground" />
+        </Button>
+      </EditorTooltip>
     )
   }
 
@@ -287,15 +628,16 @@ function DesignModeToggle({
     >
       <Paintbrush className="size-3.5" />
       <span className="leading-none">Design Mode</span>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label="Exit Design Mode"
-        title="Exit Design Mode"
-        className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-white/90 transition hover:bg-white/15 hover:text-white"
-      >
-        <X className="size-3.5" />
-      </button>
+      <EditorTooltip label="Exit Design Mode" side="top">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label="Exit Design Mode"
+          className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-white/90 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+        >
+          <X className="size-3.5" />
+        </button>
+      </EditorTooltip>
     </div>
   )
 }

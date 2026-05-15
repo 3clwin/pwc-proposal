@@ -13,6 +13,7 @@ import { CommercialsSection } from './sections/commercials'
 import { TeamSection } from './sections/team'
 import { ExperienceSection } from './sections/experience'
 import { CloseSection } from './sections/close'
+import { JourneyContentProvider } from './journey-content-context'
 import { EASE_OUT_EDITORIAL } from '../shared/motion'
 import type { FullSiteProps } from '../types'
 import type { ExecSummaryBlock } from './sections/executive-summary.schema'
@@ -147,50 +148,52 @@ export function FullSite(props: FullSiteProps) {
   }, [entered, reduce])
 
   return (
-    <div
-      ref={rootRef}
-      className="@container tpl-root"
-      style={{
-        fontFamily: 'var(--font-template-sans), Inter, system-ui, sans-serif',
-        containerType: 'inline-size',
-      }}
-    >
-      <AnimatePresence mode="wait">
-        {!entered ? (
-          <motion.div
-            key="cover-route"
-            exit={
-              reduce
-                ? undefined
-                : { opacity: 0, transition: { duration: 0.5, ease: EASE_OUT_EDITORIAL } }
-            }
-          >
-            <CoverSection onBegin={handleBegin} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="body-route"
-            initial={reduce ? undefined : { opacity: 0 }}
-            animate={reduce ? undefined : { opacity: 1 }}
-            transition={{ duration: 0.6, ease: EASE_OUT_EDITORIAL, delay: 0.1 }}
-          >
-            <JourneyNav
-              entries={TOC}
-              coverSectionId={null}
-              onReturnToCover={handleReturnToCover}
-            />
-            <ExecutiveSummarySection blocks={execSummaryBlocks} />
-            <CallToActionSection />
-            <FoundationSection />
-            <VisionSection />
-            <DeliverySection />
-            <CommercialsSection />
-            <TeamSection />
-            <ExperienceSection />
-            <CloseSection />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <JourneyContentProvider site={props.site} tokens={props.tokens}>
+      <div
+        ref={rootRef}
+        className="@container tpl-root"
+        style={{
+          fontFamily: 'var(--font-template-sans), Inter, system-ui, sans-serif',
+          containerType: 'inline-size',
+        }}
+      >
+        <AnimatePresence mode="wait">
+          {!entered ? (
+            <motion.div
+              key="cover-route"
+              exit={
+                reduce
+                  ? undefined
+                  : { opacity: 0, transition: { duration: 0.5, ease: EASE_OUT_EDITORIAL } }
+              }
+            >
+              <CoverSection onBegin={handleBegin} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="body-route"
+              initial={reduce ? undefined : { opacity: 0 }}
+              animate={reduce ? undefined : { opacity: 1 }}
+              transition={{ duration: 0.6, ease: EASE_OUT_EDITORIAL, delay: 0.1 }}
+            >
+              <JourneyNav
+                entries={TOC}
+                coverSectionId={null}
+                onReturnToCover={handleReturnToCover}
+              />
+              <ExecutiveSummarySection blocks={execSummaryBlocks} />
+              <CallToActionSection />
+              <FoundationSection />
+              <VisionSection />
+              <DeliverySection />
+              <CommercialsSection />
+              <TeamSection />
+              <ExperienceSection />
+              <CloseSection />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </JourneyContentProvider>
   )
 }

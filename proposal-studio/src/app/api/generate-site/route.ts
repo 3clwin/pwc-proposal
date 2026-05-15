@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server'
 import { generateCompletion } from '@/lib/llm'
 import { resolveLLMConfig } from '@/lib/llm/server-config'
 import { generateSitePrompt } from '@/prompts/generate-site'
+import { extractRfpPrompt } from '@/prompts/extract-rfp'
+import { adaptSiteContentToJourney } from '@/lib/journey-template-adapter'
 import {
   LILLY_SITE_CONTENT,
   GENERATION_DURATION_MS,
 } from '@/data/lilly-proposal'
 import type { BrandTokens, ThemeVariant, SiteContent } from '@/types'
+
+export const runtime = 'nodejs'
 
 interface GenerateSiteRequest {
   rfpText: string
@@ -19,7 +23,7 @@ function buildFallbackSite(tokens: BrandTokens, theme: ThemeVariant): SiteConten
   return {
     metadata: {
       title: 'Proposal',
-      description: 'AI-generated proposal microsite',
+      description: `AI-generated proposal microsite using the ${theme.label} direction`,
     },
     sections: [
       {
@@ -136,12 +140,24 @@ export async function POST(request: Request) {
     }
 
     if (!llm) {
-      const site = buildFallbackSite(body.tokens, body.theme)
+      const site = adaptSiteContentToJourney(buildFallbackSite(body.tokens, body.theme), body.tokens)
       return NextResponse.json({ site, source: 'fallback' })
     }
 
     try {
-      const prompt = generateSitePrompt(body.rfpText ?? '', body.tokens, body.theme)
+      let rfpAnalysis = body.rfpText ?? ''
+      if (rfpAnalysis.trim()) {
+        const analysisResponse = await generateCompletion(llm.provider, llm.model, llm.apiKey, [
+          { role: 'user', content: extractRfpPrompt(rfpAnalysis) },
+        ], {
+          maxTokens: 2048,
+          temperature: 0.2,
+          systemPrompt: 'You are a proposal strategist. Return ONLY valid JSON with no markdown fences or extra text.',
+        })
+        rfpAnalysis = analysisResponse.content
+      }
+
+      const prompt = generateSitePrompt(rfpAnalysis, body.tokens, body.theme)
       const response = await generateCompletion(llm.provider, llm.model, llm.apiKey, [
         { role: 'user', content: prompt },
       ], {
@@ -150,10 +166,10 @@ export async function POST(request: Request) {
         systemPrompt: 'You are a proposal content generator. Return ONLY valid JSON with no markdown fences or extra text.',
       })
 
-      const parsed = JSON.parse(response.content) as SiteContent
+      const parsed = adaptSiteContentToJourney(JSON.parse(response.content) as SiteContent, body.tokens)
       return NextResponse.json({ site: parsed, source: 'llm', usage: response.usage })
     } catch {
-      const site = buildFallbackSite(body.tokens, body.theme)
+      const site = adaptSiteContentToJourney(buildFallbackSite(body.tokens, body.theme), body.tokens)
       return NextResponse.json({ site, source: 'fallback-after-error' })
     }
   } catch (err) {

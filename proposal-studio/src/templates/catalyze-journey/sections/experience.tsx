@@ -9,7 +9,7 @@ import {
   PullQuote,
   SectionHeading,
 } from '../../shared/typography'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -22,7 +22,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  * small-type block to signal breadth.
  */
 export function ExperienceSection() {
-  const { experience } = CATALYZE_JOURNEY_CONTENT
+  const { experience } = useJourneyContent()
 
   return (
     <section
@@ -62,10 +62,10 @@ export function ExperienceSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={VIEWPORT_ONCE}
                 transition={{ duration: 0.8 }}
-                className="flex flex-col gap-10 rounded-3xl bg-white p-6 sm:p-10 lg:p-14"
+                className="flex flex-col gap-10 rounded-3xl bg-white p-6 @sm:p-10 @lg:p-14 sm:p-10 lg:p-14"
               >
                 {/* Header: eyebrow + title; stat (if present) sits on the right */}
-                <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                <header className="flex flex-col gap-6 @lg:flex-row @lg:items-end @lg:justify-between @lg:gap-12 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                   <div className="flex max-w-[760px] flex-col gap-3">
                     <Eyebrow tone="red">Case Study 0{i + 1}</Eyebrow>
                     <h3 className="font-display text-[clamp(24px,2.4vw,36px)] leading-[1.2] text-foreground">
@@ -92,7 +92,7 @@ export function ExperienceSection() {
                 </header>
 
                 {/* Body: Challenge / Solution / Outcome as 3-column on lg, stacked below */}
-                <div className="grid grid-cols-1 gap-8 border-t border-foreground/10 pt-8 lg:grid-cols-3 lg:gap-10">
+                <div className="grid grid-cols-1 gap-8 border-t border-foreground/10 pt-8 @lg:grid-cols-3 @lg:gap-10 lg:grid-cols-3 lg:gap-10">
                   {[
                     { label: 'Challenge', body: c.challenge },
                     { label: 'Solution', body: c.solution },

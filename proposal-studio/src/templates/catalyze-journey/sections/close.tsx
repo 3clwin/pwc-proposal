@@ -10,7 +10,7 @@ import {
 } from '../../shared/typography'
 import { PremiumCTA } from '../../shared/premium-cta'
 import { Logo } from '@/components/logo'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -20,7 +20,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  * Cool Lilly pale-blue background to feel like you've landed somewhere restful.
  */
 export function CloseSection() {
-  const { close } = CATALYZE_JOURNEY_CONTENT
+  const { close } = useJourneyContent()
 
   return (
     <section
@@ -57,7 +57,7 @@ export function CloseSection() {
           {/* Contact cards */}
           <motion.div
             variants={FADE_UP}
-            className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2"
+            className="mt-12 grid grid-cols-1 gap-5 @sm:grid-cols-2 sm:grid-cols-2"
           >
             {close.contacts.map((contact) => (
               <div

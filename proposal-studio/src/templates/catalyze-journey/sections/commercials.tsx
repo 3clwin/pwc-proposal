@@ -8,7 +8,7 @@ import {
   StatNumeral,
   SectionHeading,
 } from '../../shared/typography'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -18,7 +18,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  * reconciliation, and assumption footnotes.
  */
 export function CommercialsSection() {
-  const { commercials } = CATALYZE_JOURNEY_CONTENT
+  const { commercials } = useJourneyContent()
 
   return (
     <section
@@ -66,7 +66,7 @@ export function CommercialsSection() {
           initial="hidden"
           whileInView="show"
           viewport={VIEWPORT_ONCE}
-          className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-2"
+          className="mt-16 grid grid-cols-1 gap-6"
         >
           {commercials.feeLines.map((line, i) => (
             <motion.div
@@ -74,7 +74,7 @@ export function CommercialsSection() {
               variants={FADE_UP}
               className="flex flex-col gap-5 rounded-2xl bg-white p-8"
             >
-              <div className="flex items-baseline justify-between border-b border-foreground/10 pb-4">
+              <div className="flex flex-col gap-3 border-b border-foreground/10 pb-4">
                 <div className="flex flex-col gap-1">
                   <Eyebrow>Line 0{i + 1}</Eyebrow>
                   <h4 className="font-display text-2xl leading-tight text-foreground">
@@ -84,7 +84,7 @@ export function CommercialsSection() {
                 <span
                   className="font-display tabular-nums"
                   style={{
-                    fontSize: 'clamp(28px, 3vw, 40px)',
+                    fontSize: 'clamp(24px, 8cqw, 40px)',
                     color: '#1e2a30',
                   }}
                 >
@@ -125,7 +125,7 @@ export function CommercialsSection() {
               return (
                 <li
                   key={line.label}
-                  className={`flex items-center justify-between py-4 ${
+                  className={`flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-4 ${
                     isLast ? 'pt-5' : ''
                   }`}
                 >
@@ -141,9 +141,12 @@ export function CommercialsSection() {
                   <span
                     className={
                       isLast
-                        ? 'font-display text-3xl tabular-nums text-foreground'
-                        : 'font-display text-xl tabular-nums text-foreground/80'
+                        ? 'font-display tabular-nums text-foreground'
+                        : 'font-display tabular-nums text-foreground/80'
                     }
+                    style={{
+                      fontSize: isLast ? 'clamp(20px, 8cqw, 30px)' : 'clamp(16px, 5cqw, 20px)',
+                    }}
                   >
                     {line.value}
                   </span>

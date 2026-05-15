@@ -6,6 +6,7 @@ import {
   useEffect,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from 'react'
 import type {
@@ -217,6 +218,8 @@ type ProjectAction =
   | { type: 'SET_BRAND_TOKENS'; payload: BrandTokens }
   | { type: 'SET_THEME'; payload: ThemeVariant }
   | { type: 'SET_SITE_CONTENT'; payload: SiteContent }
+  | { type: 'RESET_SITE_CONTENT' }
+  | { type: 'HYDRATE_PROJECT'; payload: Project }
   | { type: 'UPDATE_SECTION'; payload: SiteSection }
   | { type: 'ADD_RISK_FLAG'; payload: RiskFlag }
   | { type: 'RESOLVE_RISK_FLAG'; payload: { id: string; status: RiskFlag['status'] } }
@@ -269,9 +272,22 @@ function projectReducer(state: Project, action: ProjectAction): Project {
 
   switch (action.type) {
     case 'SET_CLIENT_INFO':
+      // Submitting intake is semantically "start a fresh run for this
+      // client": clear any downstream artifacts from a prior session
+      // (brand tokens, theme selection, generated site, deployment URL,
+      // risk flags) so the theme page re-runs the extraction animation
+      // and the editor re-plays the build shimmer. Without this, a
+      // returning user submitting intake would skip straight past the
+      // ExtractionLoader on /theme because stale brandTokens in
+      // localStorage trigger the reload fast-path.
       return {
         ...state,
         ...action.payload,
+        brandTokens: null,
+        selectedTheme: null,
+        siteContent: null,
+        deploymentUrl: undefined,
+        riskFlags: [],
         updatedAt,
       }
 
@@ -295,6 +311,27 @@ function projectReducer(state: Project, action: ProjectAction): Project {
         siteContent: ensureBlocks(action.payload),
         updatedAt,
       }
+
+    case 'RESET_SITE_CONTENT':
+      // Wipes generated site content so the editor re-enters the
+      // "building" state and re-plays the shimmer. Also clears any
+      // prior deployment URL because it would reference stale content.
+      return {
+        ...state,
+        siteContent: null,
+        deploymentUrl: undefined,
+        riskFlags: [],
+        updatedAt,
+      }
+
+    case 'HYDRATE_PROJECT':
+      // Atomic replacement of the whole project from persisted storage.
+      // `ensureBlocks` repairs any pre-schema siteContent so the editor
+      // always sees current-shape blocks. Preserves the persisted
+      // `updatedAt` rather than bumping it — hydration is not an edit.
+      return action.payload.siteContent
+        ? { ...action.payload, siteContent: ensureBlocks(action.payload.siteContent) }
+        : action.payload
 
     case 'UPDATE_SECTION': {
       if (!state.siteContent) return state
@@ -574,11 +611,33 @@ interface ProjectContextValue {
   dispatch: React.Dispatch<ProjectAction>
   canUndo: boolean
   canRedo: boolean
+  /**
+   * `true` once the initial localStorage read has run (on the client).
+   * Consumers that conditionally redirect based on project fields MUST
+   * wait for this before pushing — otherwise they'll bounce the user
+   * back to the start on every page reload, before persisted state has
+   * had a chance to hydrate into context.
+   */
+  hydrated: boolean
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null)
 
-const SITE_CONTENT_STORAGE_KEY = 'proposal-studio.siteContent.v1'
+/**
+ * Whole-project storage key. We persist the entire Project so a browser
+ * reload mid-flow (intake → theme → editor) restores exactly where the
+ * user was: same client, brand tokens, theme selection, site content,
+ * and deployment state.
+ */
+const PROJECT_STORAGE_KEY = 'proposal-studio.project.v1'
+
+/**
+ * Legacy key that only held `siteContent`. Still read on first mount so
+ * existing users don't lose their in-flight proposal the first time they
+ * reload after this upgrade. Cleared once we've migrated into the
+ * full-project key.
+ */
+const LEGACY_SITE_CONTENT_STORAGE_KEY = 'proposal-studio.siteContent.v1'
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(
@@ -592,42 +651,75 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   )
   const { project } = state
   const hydratedRef = useRef(false)
+  const [hydrated, setHydrated] = useState(false)
 
-  // Hydrate siteContent from localStorage on first mount. Runs once.
+  // Hydrate the whole Project from localStorage on first mount. Runs
+  // exactly once. We prefer the full-project key and fall back to the
+  // legacy siteContent-only key so users reloading after this upgrade
+  // don't lose their in-flight proposal. Until this effect runs and
+  // `hydrated` flips true, consumer components must NOT make redirect
+  // decisions based on project fields — the fields haven't been filled
+  // in yet and the user will bounce back to the start of the flow.
   useEffect(() => {
     if (hydratedRef.current) return
     hydratedRef.current = true
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined') {
+      setHydrated(true)
+      return
+    }
+
     try {
-      const raw = window.localStorage.getItem(SITE_CONTENT_STORAGE_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw) as SiteContent
-      if (parsed && Array.isArray(parsed.sections)) {
-        dispatch({ type: 'SET_SITE_CONTENT', payload: parsed })
+      const rawProject = window.localStorage.getItem(PROJECT_STORAGE_KEY)
+      if (rawProject) {
+        const parsed = JSON.parse(rawProject) as Project
+        // Minimal structural check — createdAt + id are the only
+        // fields guaranteed present on every Project since day one.
+        if (parsed && typeof parsed.id === 'string') {
+          dispatch({ type: 'HYDRATE_PROJECT', payload: parsed })
+          setHydrated(true)
+          return
+        }
+      }
+
+      // Legacy fallback: project was never fully persisted, but the old
+      // siteContent-only key may still hold generated content. Keep
+      // whatever intake-less state we can recover, then let the persist
+      // effect write the migrated shape back under the new key.
+      const rawLegacy = window.localStorage.getItem(LEGACY_SITE_CONTENT_STORAGE_KEY)
+      if (rawLegacy) {
+        const parsed = JSON.parse(rawLegacy) as SiteContent
+        if (parsed && Array.isArray(parsed.sections)) {
+          dispatch({ type: 'SET_SITE_CONTENT', payload: parsed })
+        }
+        window.localStorage.removeItem(LEGACY_SITE_CONTENT_STORAGE_KEY)
       }
     } catch {
-      // Corrupt or incompatible storage; ignore and fall back to generation.
+      // Corrupt or incompatible storage; ignore and fall back to a
+      // fresh project. User can re-enter intake details.
+    } finally {
+      setHydrated(true)
     }
   }, [])
 
-  // Persist siteContent on every change after hydration. Debounced via
-  // microtask so a burst of rapid dispatches only writes once per tick.
+  // Persist the whole project on every change after hydration. Debounced
+  // via a short timeout so a burst of rapid dispatches only writes once
+  // per tick. We don't persist before hydration completes to avoid
+  // clobbering the saved project with the initial empty template.
   useEffect(() => {
-    if (!hydratedRef.current) return
+    if (!hydratedRef.current || !hydrated) return
     if (typeof window === 'undefined') return
-    if (!project.siteContent) return
     const handle = window.setTimeout(() => {
       try {
         window.localStorage.setItem(
-          SITE_CONTENT_STORAGE_KEY,
-          JSON.stringify(project.siteContent),
+          PROJECT_STORAGE_KEY,
+          JSON.stringify(project),
         )
       } catch {
         // Storage full or disabled; silently degrade.
       }
     }, 120)
     return () => window.clearTimeout(handle)
-  }, [project.siteContent])
+  }, [project, hydrated])
 
   return (
     <ProjectContext.Provider
@@ -636,6 +728,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         dispatch,
         canUndo: state.past.length > 0,
         canRedo: state.future.length > 0,
+        hydrated,
       }}
     >
       {children}

@@ -15,6 +15,7 @@ import {
   type ExecSummaryBlock,
 } from '@/templates/catalyze-journey/sections/executive-summary.schema'
 import { AssetUploadDialog } from './asset-upload-dialog'
+import { EditorTooltip } from './editor-tooltip'
 
 interface BlockOverlayProps {
   active: boolean
@@ -258,15 +259,17 @@ function InsertButton({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="relative z-10 inline-flex size-5 items-center justify-center rounded-full bg-[#C52B09] text-white opacity-0 shadow-sm transition group-hover:opacity-100 hover:scale-110"
-            aria-label="Add block here"
-          >
-            <Plus className="size-3" />
-          </button>
-        </PopoverTrigger>
+        <EditorTooltip label="Add block here" side="top">
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="relative z-10 inline-flex size-5 items-center justify-center rounded-full bg-[#C52B09] text-white opacity-0 shadow-sm transition group-hover:opacity-100 hover:scale-110 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Add block here"
+            >
+              <Plus className="size-3" />
+            </button>
+          </PopoverTrigger>
+        </EditorTooltip>
         <PopoverContent
           align="center"
           sideOffset={6}

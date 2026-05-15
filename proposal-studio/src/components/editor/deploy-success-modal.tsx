@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { EditorTooltip } from './editor-tooltip'
 
 interface DeploySuccessModalProps {
   open: boolean
@@ -48,13 +49,20 @@ export function DeploySuccessModal({ open, onClose, url }: DeploySuccessModalPro
           <span className="flex-1 truncate font-mono text-sm" style={{ color: '#2563EB' }}>
             {url}
           </span>
-          <Button variant="ghost" size="icon-xs" onClick={handleCopy}>
-            {copied ? (
-              <Check className="size-3.5 text-green-600" />
-            ) : (
-              <Copy className="size-3.5" style={{ color: '#6B6B6B' }} />
-            )}
-          </Button>
+          <EditorTooltip label={copied ? 'Copied' : 'Copy link'}>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleCopy}
+              aria-label={copied ? 'Copied' : 'Copy link'}
+            >
+              {copied ? (
+                <Check className="size-3.5 text-green-600" />
+              ) : (
+                <Copy className="size-3.5" style={{ color: '#6B6B6B' }} />
+              )}
+            </Button>
+          </EditorTooltip>
         </div>
 
         <div className="flex gap-2">

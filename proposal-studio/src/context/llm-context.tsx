@@ -84,8 +84,11 @@ export function LLMSettingsProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    setSettings(loadSettings())
-    setHydrated(true)
+    const handle = window.setTimeout(() => {
+      setSettings(loadSettings())
+      setHydrated(true)
+    }, 0)
+    return () => window.clearTimeout(handle)
   }, [])
 
   useEffect(() => {

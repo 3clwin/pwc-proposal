@@ -100,10 +100,8 @@ export function ClientNameAutosuggest({
     return [...savedMatches, ...dirMatches].slice(0, MAX_SUGGESTIONS)
   }, [value, savedClients])
 
-  // Clamp highlight when suggestions list shrinks.
-  useEffect(() => {
-    if (highlight >= suggestions.length) setHighlight(0)
-  }, [suggestions.length, highlight])
+  const activeHighlight =
+    suggestions.length > 0 ? Math.min(highlight, suggestions.length - 1) : 0
 
   // Close when clicking outside.
   useEffect(() => {
@@ -132,7 +130,7 @@ export function ClientNameAutosuggest({
       setHighlight((h) => (h - 1 + suggestions.length) % suggestions.length)
       e.preventDefault()
     } else if (e.key === 'Enter') {
-      const picked = suggestions[highlight]
+      const picked = suggestions[activeHighlight]
       if (picked) {
         onPickSuggestion(picked)
         setOpen(false)
@@ -175,7 +173,7 @@ export function ClientNameAutosuggest({
         >
           <ul className="max-h-[280px] overflow-y-auto py-1">
             {suggestions.map((s, i) => {
-              const isActive = i === highlight
+              const isActive = i === activeHighlight
               return (
                 <li
                   key={`${s.source}:${s.label}`}

@@ -124,8 +124,11 @@ export function useSavedClients() {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    setClients(load())
-    setHydrated(true)
+    const handle = window.setTimeout(() => {
+      setClients(load())
+      setHydrated(true)
+    }, 0)
+    return () => window.clearTimeout(handle)
   }, [])
 
   const saveClient = useCallback(

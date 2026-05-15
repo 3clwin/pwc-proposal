@@ -10,7 +10,7 @@ import {
 } from '../../shared/typography'
 import { OperatingModelDiagram } from '../components/operating-model-diagram'
 import { SuccessFactorsDiagram } from '../components/success-factors-diagram'
-import { CATALYZE_JOURNEY_CONTENT } from '@/data/catalyze-journey-content'
+import { useJourneyContent } from '../journey-content-context'
 import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
 
 /**
@@ -27,7 +27,7 @@ import { FADE_UP, STAGGER_PARENT, VIEWPORT_ONCE } from '../../shared/motion'
  *        italic lead sentence per factor.
  */
 export function FoundationSection() {
-  const { foundation } = CATALYZE_JOURNEY_CONTENT
+  const { foundation } = useJourneyContent()
   const tale = foundation.taleOfTwo
   // Pre-assemble the three beats so we can iterate over them evenly.
   const partnerBeats = [
@@ -74,14 +74,14 @@ export function FoundationSection() {
           </div>
 
           {/* Character header strip */}
-          <div className="grid grid-cols-1 gap-6 border-y border-foreground/10 py-8 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 border-y border-foreground/10 py-8 @md:grid-cols-2 md:grid-cols-2">
             {/* Rachel */}
             <div className="flex gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/team/rachel-martinez.png"
                 alt={tale.partner.name}
-                className="aspect-square w-20 shrink-0 rounded object-cover"
+                className="aspect-square h-20 w-20 shrink-0 self-start rounded object-cover"
               />
               <div className="flex flex-col justify-center gap-1">
                 <Eyebrow tone="red">Partner</Eyebrow>
@@ -99,7 +99,7 @@ export function FoundationSection() {
               <img
                 src="/team/marcus-chen.png"
                 alt={tale.navigator.name}
-                className="aspect-square w-20 shrink-0 rounded object-cover"
+                className="aspect-square h-20 w-20 shrink-0 self-start rounded object-cover"
               />
               <div className="flex flex-col justify-center gap-1">
                 <Eyebrow tone="red">Navigator</Eyebrow>
@@ -152,7 +152,7 @@ export function FoundationSection() {
                 </div>
 
                 {/* Two-column quote layout */}
-                <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-16">
+                <div className="grid grid-cols-1 gap-10 @md:grid-cols-2 @md:gap-16 md:grid-cols-2 md:gap-16">
 
                 {/* Rachel column */}
                 <div className="flex flex-col gap-3">

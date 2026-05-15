@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,34 +11,77 @@ import { ExtractionLoader } from '@/components/extraction-loader'
 import { ProposalCanvas } from '@/components/proposal-canvas'
 import { useProject } from '@/context/project-context'
 import { useLLM } from '@/context/llm-context'
+import { getAvailableTemplates } from '@/templates'
 import type { BrandTokens, ThemeVariant } from '@/types'
 
 export default function ThemePage() {
   const router = useRouter()
-  const { project, dispatch } = useProject()
+  const { project, dispatch, hydrated } = useProject()
   const { activeProvider, activeModel, activeApiKey } = useLLM()
   const [themes, setThemes] = useState<ThemeVariant[]>([])
   const [tokens, setTokens] = useState<BrandTokens | null>(null)
   const [selectedTheme, setSelectedTheme] = useState<ThemeVariant | null>(null)
   const [loading, setLoading] = useState(true)
   const [building, setBuilding] = useState(false)
+  const fetchDone = useRef(false)
+  const animDone = useRef(false)
+  const didStartExtraction = useRef(false)
+
+  const maybeDismissLoader = useCallback(() => {
+    if (fetchDone.current && animDone.current) setLoading(false)
+  }, [])
+
+  const handleLoaderComplete = useCallback(() => {
+    animDone.current = true
+    maybeDismissLoader()
+  }, [maybeDismissLoader])
 
   useEffect(() => {
+    if (!hydrated) return
     if (!project.clientSlug) {
       router.push('/intake')
       return
     }
 
+    // Fast-path on reload: brand tokens already exist from a previous
+    // session. Restore the theme grid immediately — but only when we
+    // haven't kicked off a fresh extraction this session.
+    if (project.brandTokens && !didStartExtraction.current) {
+      const restoredTokens = project.brandTokens
+      const restoredThemes: ThemeVariant[] = getAvailableTemplates(restoredTokens).map((t) => ({
+        id: t.id,
+        label: t.label,
+        description: t.description,
+        colorWeight: t.colorWeight,
+        layoutDensity: t.layoutDensity,
+        typeScale: t.typeScale,
+        accentUsage: t.accentUsage,
+        preview: t.preview,
+        tokens: restoredTokens,
+      }))
+      setTokens(restoredTokens)
+      setThemes(restoredThemes)
+      if (project.selectedTheme) {
+        const match = restoredThemes.find((t) => t.id === project.selectedTheme?.id)
+        setSelectedTheme(match ?? project.selectedTheme)
+      }
+      setLoading(false)
+      return
+    }
+
+    if (didStartExtraction.current) return
+
     async function extractBrand() {
+      didStartExtraction.current = true
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
+          'x-llm-provider': activeProvider,
+          'x-llm-model': activeModel,
         }
 
         if (activeApiKey) {
-          headers['x-llm-provider'] = activeProvider
           headers['x-llm-api-key'] = activeApiKey
-          headers['x-llm-model'] = activeModel
         }
 
         const res = await fetch('/api/extract-brand', {
@@ -69,13 +112,13 @@ export default function ThemePage() {
         // Silent — loader already shows extraction in progress, and the
         // page falls back gracefully when tokens are unavailable.
       } finally {
-        // Hold the loader for a minimum duration so the animation feels intentional
-        setTimeout(() => setLoading(false), 8000)
+        fetchDone.current = true
+        maybeDismissLoader()
       }
     }
 
     extractBrand()
-  }, [project.clientSlug, project.clientUrl, project.industry, activeProvider, activeModel, activeApiKey, dispatch, router])
+  }, [hydrated, project.clientSlug, project.clientUrl, project.industry, project.brandTokens, project.selectedTheme, activeProvider, activeModel, activeApiKey, dispatch, router, maybeDismissLoader])
 
   function handleSelectTheme(theme: ThemeVariant) {
     setSelectedTheme(theme)
@@ -84,11 +127,12 @@ export default function ThemePage() {
 
   function handleBuildSite() {
     if (!selectedTheme) return
-    // Only the Journey template has a full implementation at this stage;
-    // selecting another template is allowed visually but Build my site
-    // silently no-ops so the user can explore without committing.
-    if (selectedTheme.id !== 'catalyze-journey') return
     setBuilding(true)
+    // Wipe any previously-generated site so the editor mounts in its
+    // "building" state and re-plays the shimmer every time the user
+    // starts a new build. Without this, a stale `siteContent` hydrated
+    // from localStorage would skip the shimmer entirely.
+    dispatch({ type: 'RESET_SITE_CONTENT' })
     // Go straight to the editor — the generation fetch now runs inside
     // `EditorLayout` with a shimmer skeleton in the preview pane. No
     // more dedicated loading-build route.
@@ -102,6 +146,7 @@ export default function ThemePage() {
       <ExtractionLoader
         caption={project.clientUrl || 'client website'}
         ariaPrefix="Brand extraction"
+        onComplete={handleLoaderComplete}
       />
     )
   }

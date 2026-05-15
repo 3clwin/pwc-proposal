@@ -1,6 +1,7 @@
 import React from 'react'
 import { Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EditorTooltip } from './editor-tooltip'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -26,9 +27,16 @@ export const ChatMessage = React.memo(function ChatMessage({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {content}
           </p>
-          <Button variant="ghost" size="icon-xs" className="shrink-0 text-muted-foreground hover:text-foreground">
-            <Undo2 className="size-3.5" />
-          </Button>
+          <EditorTooltip label="Restore this prompt">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Restore this prompt"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <Undo2 className="size-3.5" />
+            </Button>
+          </EditorTooltip>
         </div>
       </div>
     )

@@ -7,11 +7,18 @@ import {
   generateDefaultThemeVariants,
 } from '@/lib/brand-extraction'
 import {
+  crawlDesignSystem,
+  mergeCrawlerWithFallback,
+  type CrawledDesignSystem,
+} from '@/lib/design-system-crawler'
+import {
   LILLY_BRAND_TOKENS,
   LILLY_THEMES,
   CRAWL_DURATION_MS,
 } from '@/data/lilly-proposal'
 import type { BrandTokens, ThemeVariant } from '@/types'
+
+export const runtime = 'nodejs'
 
 function isLillyClient(slug: string, url: string): boolean {
   const s = slug.toLowerCase()
@@ -23,6 +30,66 @@ interface ExtractBrandRequest {
   clientSlug: string
   clientUrl: string
   industry?: string
+}
+
+const JOURNEY_ADAPTED_THEME_ID = 'journey-adapted'
+
+function createJourneyTheme(tokens: BrandTokens): ThemeVariant {
+  return {
+    id: JOURNEY_ADAPTED_THEME_ID,
+    label: 'Journey',
+    description:
+      'The Lilly Journey experience adapted to this client: editorial cover, numbered narrative, executive-summary blocks, delivery roadmap, commercials, team, and proof sections using the client design system.',
+    colorWeight: 'light',
+    layoutDensity: 'spacious',
+    typeScale: 'editorial',
+    accentUsage: 'moderate',
+    preview: {
+      heroStyle: 'Full-viewport editorial cover with client-specific brand punctuation',
+      sectionLayout: 'Scroll-driven proposal narrative with executive summary, delivery, commercials, team, and proof',
+      navStyle: 'Sticky numbered table of contents with a brand-accent progress rule',
+    },
+    tokens,
+  }
+}
+
+function withJourneyTheme(
+  themes: ThemeVariant[],
+  tokens: BrandTokens
+): ThemeVariant[] {
+  const rebound = themes.map((theme) => ({ ...theme, tokens }))
+  const withoutDuplicate = rebound.filter((theme) => theme.id !== JOURNEY_ADAPTED_THEME_ID)
+  return [createJourneyTheme(tokens), ...withoutDuplicate]
+}
+
+function crawlEvidenceSummary(crawl: CrawledDesignSystem | null): string {
+  if (!crawl) return 'No Playwright crawl evidence was available.'
+  return JSON.stringify(
+    {
+      title: crawl.title,
+      finalUrl: crawl.finalUrl,
+      description: crawl.description,
+      colors: {
+        primary: crawl.colors.primary,
+        secondary: crawl.colors.secondary,
+        tertiary: crawl.colors.tertiary,
+        neutral: crawl.colors.neutral,
+        accent: crawl.colors.accent,
+        named: crawl.colors.named.slice(0, 12),
+        semantic: crawl.colors.semantic.map((group) => ({
+          label: group.label,
+          tokens: group.tokens.slice(0, 12),
+        })),
+      },
+      typography: crawl.typography,
+      logo: crawl.logo,
+      heroImages: crawl.heroImages.slice(0, 4),
+      brandVoice: crawl.brandVoice,
+      warnings: crawl.warnings,
+    },
+    null,
+    2
+  )
 }
 
 function buildFullTokens(
@@ -175,18 +242,39 @@ export async function POST(request: Request) {
       })
     }
 
+    let crawl: CrawledDesignSystem | null = null
+    const crawlWarnings: string[] = []
+    try {
+      crawl = await crawlDesignSystem(body.clientUrl)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Website crawl failed'
+      crawlWarnings.push(message)
+    }
+
+    const fallbackTokens = generateSimulatedBrandTokens(body.clientSlug, body.clientUrl)
+    const crawledTokens = mergeCrawlerWithFallback(fallbackTokens, crawl)
+
     if (!llm) {
-      const tokens = generateSimulatedBrandTokens(body.clientSlug, body.clientUrl)
-      const themes = generateDefaultThemeVariants(tokens)
-      return NextResponse.json({ tokens, themes, source: 'simulated' })
+      const themes = withJourneyTheme(generateDefaultThemeVariants(crawledTokens), crawledTokens)
+      return NextResponse.json({
+        tokens: crawledTokens,
+        themes,
+        source: crawl ? 'playwright' : 'simulated',
+        crawlWarnings,
+      })
     }
 
     try {
-      const brandPrompt = extractBrandPrompt(
+      const brandPrompt = `${extractBrandPrompt(
         body.clientSlug,
         body.clientUrl,
         body.industry ?? ''
-      )
+      )}
+
+Playwright crawl evidence:
+${crawlEvidenceSummary(crawl)}
+
+Use the Playwright evidence as the source of truth when it contains real CSS variables, colors, fonts, logo candidates, or imagery. If the evidence is sparse, infer conservatively from the website URL and industry.`
 
       const brandResponse = await generateCompletion(llm.provider, llm.model, llm.apiKey, [
         { role: 'user', content: brandPrompt },
@@ -202,13 +290,14 @@ export async function POST(request: Request) {
         brandVoice: string[]
       }
 
-      const tokens = buildFullTokens(
+      const llmTokens = buildFullTokens(
         body.clientSlug,
         body.clientUrl,
         brandData.colors,
         brandData.typography,
         brandData.brandVoice
       )
+      const tokens = mergeCrawlerWithFallback(llmTokens, crawl)
 
       const themesPrompt = generateThemesFromBrandPrompt(
         body.clientSlug,
@@ -237,21 +326,29 @@ export async function POST(request: Request) {
         preview: { heroStyle: string; sectionLayout: string; navStyle: string }
       }>
 
-      const themes: ThemeVariant[] = themeData.map((t) => ({ ...t, tokens }))
+      const themes: ThemeVariant[] = withJourneyTheme(
+        themeData.map((t) => ({ ...t, tokens })),
+        tokens
+      )
 
       return NextResponse.json({
         tokens,
         themes,
-        source: 'llm',
+        source: crawl ? 'playwright+llm' : 'llm',
+        crawlWarnings,
         usage: {
           brand: brandResponse.usage,
           themes: themesResponse.usage,
         },
       })
     } catch {
-      const tokens = generateSimulatedBrandTokens(body.clientSlug, body.clientUrl)
-      const themes = generateDefaultThemeVariants(tokens)
-      return NextResponse.json({ tokens, themes, source: 'fallback-after-error' })
+      const themes = withJourneyTheme(generateDefaultThemeVariants(crawledTokens), crawledTokens)
+      return NextResponse.json({
+        tokens: crawledTokens,
+        themes,
+        source: crawl ? 'playwright-fallback-after-error' : 'fallback-after-error',
+        crawlWarnings,
+      })
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Brand extraction failed'

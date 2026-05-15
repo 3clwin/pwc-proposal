@@ -1,11 +1,14 @@
 'use client'
 
 import * as React from 'react'
+import { createPortal } from 'react-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   AlignCenter,
   AlignLeft,
   AlignRight,
   Bold,
+  ChevronsUpDown,
   Image as ImageIcon,
   ImagePlus,
   Italic,
@@ -20,12 +23,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { useProject } from '@/context/project-context'
 import { cn } from '@/lib/utils'
 import { searchIcons, type IconLibraryEntry } from '@/lib/icons'
+import { useLocalFonts } from '@/hooks/use-local-fonts'
 import { BrandColorPicker } from './brand-color-picker'
+import { EditorTooltip } from './editor-tooltip'
 import {
   resolveBlockFromElement,
   writeIconToBlock,
@@ -52,6 +58,7 @@ import {
 interface DesignModeOverlayProps {
   active: boolean
   contentRef: React.RefObject<HTMLElement | null>
+  inspectorHost: HTMLElement | null
   onExit: () => void
 }
 
@@ -269,9 +276,11 @@ function describeElement(el: HTMLElement): { role: string; tag: string; preview:
 export function DesignModeOverlay({
   active,
   contentRef,
+  inspectorHost,
   onExit,
 }: DesignModeOverlayProps) {
   const { project, dispatch } = useProject()
+  const reduceMotion = useReducedMotion()
   const [hoverRect, setHoverRect] = React.useState<Rect | null>(null)
   const [hoverLabel, setHoverLabel] = React.useState<string>('')
   const [hoveredEl, setHoveredEl] = React.useState<HTMLElement | null>(null)
@@ -522,46 +531,20 @@ export function DesignModeOverlay({
 
   if (!active) return null
 
-  return (
-    <div
-      ref={overlayRef}
-      className="pointer-events-none absolute inset-0 z-40"
-      aria-hidden
-    >
-      {/* Hover outline */}
-      {hoverRect && hoveredEl !== selectedEl && (
-        <div
-          className="absolute border-2 border-[#C52B09]"
-          style={{
-            top: hoverRect.top,
-            left: hoverRect.left,
-            width: hoverRect.width,
-            height: hoverRect.height,
-          }}
-        >
-          <HoverLabel label={hoverLabel} />
-        </div>
-      )}
+  const outlineTransition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, stiffness: 720, damping: 46, mass: 0.42 }
 
-      {/* Selection outline */}
-      {selectedRect && (
-        <div
-          className="absolute"
-          style={{
-            top: selectedRect.top,
-            left: selectedRect.left,
-            width: selectedRect.width,
-            height: selectedRect.height,
-          }}
-        >
-          <div className="absolute inset-0 border-2 border-[#C52B09]" />
-          <SelectionLabel label={selectedLabel} />
-          <FloatingToolbar
+  const inspectorPortal = inspectorHost
+    ? createPortal(
+        selectedEl ? (
+          <ElementInspectorSidebar
             element={selectedEl}
             editing={editing}
             onEditText={startEditing}
             onText={(value) => {
               if (selectedEl) {
+                // eslint-disable-next-line react-hooks/immutability -- design mode intentionally edits the live preview DOM.
                 selectedEl.textContent = value
                 commitTextToSchema(selectedEl, value)
               }
@@ -615,6 +598,7 @@ export function DesignModeOverlay({
               })
             }
             onAlign={(align) => applyStyle({ textAlign: align })}
+            onFontFamily={(fontFamily) => applyStyle({ fontFamily })}
             onColor={(color) => applyStyle({ color })}
             brandTokens={project.brandTokens}
             onSpacing={(prop, value) =>
@@ -626,9 +610,83 @@ export function DesignModeOverlay({
               setSelectedRect(null)
             }}
           />
-        </div>
-      )}
+        ) : (
+          <InspectorEmptyState />
+        ),
+        inspectorHost,
+      )
+    : null
+
+  return (
+    <>
+    <div
+      ref={overlayRef}
+      className="pointer-events-none absolute inset-0 z-40"
+    >
+      {/* Hover outline */}
+      <AnimatePresence initial={false}>
+        {hoverRect && hoveredEl !== selectedEl && (
+          <motion.div
+            className="absolute border-2 border-[#C52B09] shadow-[0_0_0_1px_rgba(197,43,9,0.08)]"
+            aria-hidden
+            initial={{
+              opacity: 0,
+              scale: 0.985,
+              top: hoverRect.top,
+              left: hoverRect.left,
+              width: hoverRect.width,
+              height: hoverRect.height,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              top: hoverRect.top,
+              left: hoverRect.left,
+              width: hoverRect.width,
+              height: hoverRect.height,
+            }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={outlineTransition}
+          >
+            <HoverLabel label={hoverLabel} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selection outline */}
+      <AnimatePresence initial={false}>
+        {selectedRect && (
+          <motion.div
+            className="absolute"
+            aria-hidden
+            initial={{
+              opacity: 0,
+              scale: 0.985,
+              top: selectedRect.top,
+              left: selectedRect.left,
+              width: selectedRect.width,
+              height: selectedRect.height,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              top: selectedRect.top,
+              left: selectedRect.left,
+              width: selectedRect.width,
+              height: selectedRect.height,
+            }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={outlineTransition}
+          >
+            <div className="absolute inset-0 border-2 border-[#C52B09] shadow-[0_0_0_1px_rgba(197,43,9,0.1),0_8px_24px_rgba(197,43,9,0.12)]" />
+            <SelectionLabel label={selectedLabel} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
+    {inspectorPortal}
+    </>
   )
 }
 
@@ -666,7 +724,36 @@ type SpacingProp =
   | 'width'
   | 'height'
 
-interface FloatingToolbarProps {
+const TEMPLATE_FONT_OPTIONS = [
+  { label: 'Inherit', value: '__inherit__', css: '' },
+  {
+    label: 'Sans (Space Grotesk)',
+    value: 'template-sans',
+    css: 'var(--font-template-fallback-sans), Arial, sans-serif',
+  },
+  {
+    label: 'Display Wide (Bricolage)',
+    value: 'template-wide',
+    css: 'var(--font-template-fallback-wide), Arial, sans-serif',
+  },
+  {
+    label: 'Serif (EB Garamond)',
+    value: 'template-serif',
+    css: 'var(--font-template-fallback-serif), Georgia, serif',
+  },
+  {
+    label: 'Mono (JetBrains)',
+    value: 'mono',
+    css: 'var(--font-mono), ui-monospace, SFMono-Regular, monospace',
+  },
+  {
+    label: 'System UI',
+    value: 'system',
+    css: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+] as const
+
+interface ElementInspectorSidebarProps {
   element: HTMLElement | null
   editing: boolean
   onEditText: () => void
@@ -677,6 +764,7 @@ interface FloatingToolbarProps {
   onItalic: () => void
   onUnderline: () => void
   onAlign: (align: 'left' | 'center' | 'right') => void
+  onFontFamily: (fontFamily: string) => void
   onColor: (color: string) => void
   /** Brand tokens from the project — powers the organized color picker. */
   brandTokens: import('@/types').BrandTokens | null | undefined
@@ -690,43 +778,50 @@ interface FloatingToolbarProps {
  * force a remount of uncontrolled inputs when the user selects a
  * different element.
  */
+const ELEMENT_KEYS = new WeakMap<HTMLElement, string>()
+let elementKeyCounter = 0
+
 function domKey(el: HTMLElement): string {
-  // Icon host — include the host type + sub-item id so swapping
-  // between different icon tiles re-mounts the picker state.
-  const iconHost = findIconHost(el)
-  if (iconHost) {
-    const t = iconHost.target
-    const id =
-      t.host === 'slide-1-summary' ? t.workstreamId : t.barId
-    return `ICON:${t.host}:${id}`
-  }
-  // For <img>, include src so selecting a different image forces a
-  // remount (the ImagePanel's internal state is keyed off of the
-  // element reference too, but we belt-and-suspenders it here).
-  if (el instanceof HTMLImageElement) {
-    return `IMG:${el.src.slice(0, 160)}`
-  }
-  // Container with a backdrop image (e.g. a <section> with an
-  // absolutely-positioned <img> child). Key off the backdrop's src so
-  // swapping between hero sections re-mounts the ImagePanel cleanly.
-  const bg = findBackgroundImage(el)
-  if (bg) {
-    return `SECTION_IMG:${el.id || el.tagName}:${bg.src.slice(0, 160)}`
-  }
-  // Otherwise tagName + first 80 chars of textContent is uniquely
-  // identifying for the lifetime of a selection within a page.
-  return `${el.tagName}:${(el.textContent ?? '').slice(0, 80)}`
+  const existing = ELEMENT_KEYS.get(el)
+  if (existing) return existing
+  const next = `${el.tagName}:${++elementKeyCounter}`
+  ELEMENT_KEYS.set(el, next)
+  return next
+}
+
+function InspectorEmptyState() {
+  return (
+    <aside
+      className="pointer-events-auto h-full"
+      role="complementary"
+      aria-label="Element properties"
+    >
+      <div className="flex h-full flex-col bg-card text-foreground">
+        <div className="border-b border-border px-3 py-3">
+          <p className="text-sm font-semibold">Design Inspector</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Select an element on the canvas to edit its properties.
+          </p>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-6 text-center">
+          <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
+            Hover to preview an element, then click it to pin the selection and
+            reveal typography, layout, fill, and effect controls here.
+          </p>
+        </div>
+      </div>
+    </aside>
+  )
 }
 
 /**
- * Contextual properties panel for the selected element. Modeled
- * after a Figma / DesignBuddy-style inspector: tag chip + tabbed
- * header, then labeled property sections grouped by intent (Edit,
- * Style, Layout). Each section follows a consistent
- * `<SectionLabel /> + <Control />` pattern with generous breathing
- * room.
+ * Contextual properties sidebar for the selected element. Modeled
+ * after a Figma-style inspector: tag chip + tabbed header, then
+ * labeled property sections grouped by intent (Edit, Style, Layout).
+ * It stays pinned to the editor edge so the selected element remains
+ * visible and the controls don't fight the canvas for space.
  */
-function FloatingToolbar({
+function ElementInspectorSidebar({
   element,
   editing,
   onEditText,
@@ -737,12 +832,13 @@ function FloatingToolbar({
   onItalic,
   onUnderline,
   onAlign,
+  onFontFamily,
   onColor,
   brandTokens,
   onSpacing,
   onDelete,
   onClose,
-}: FloatingToolbarProps) {
+}: ElementInspectorSidebarProps) {
   const tag = element?.tagName ?? 'DIV'
   const isText = element ? TEXT_TAGS.has(tag) : false
   const isImage = tag === 'IMG'
@@ -772,241 +868,486 @@ function FloatingToolbar({
     [element, backgroundImage],
   )
   const showImagePanel = effectiveImage !== null && !isIcon
+  const rect = element?.getBoundingClientRect()
+  const styles = element ? getComputedStyle(element) : null
+  const elementName = element
+    ? describeElement(element)
+    : { role: 'Selection', tag: 'div', preview: '' }
+  const x = rect ? Math.round(rect.left) : 0
+  const y = rect ? Math.round(rect.top) : 0
+  const width = rect ? Math.round(rect.width) : 0
+  const height = rect ? Math.round(rect.height) : 0
+  const opacity = styles ? Math.round(Number(styles.opacity || '1') * 100) : 100
 
   return (
-    <Card
-      key={element ? domKey(element) : 'none'}
-      size="sm"
-      className="pointer-events-auto absolute right-0 top-full z-50 mt-3 w-[300px] gap-0 overflow-hidden rounded-xl border border-foreground/10 bg-slate-50 py-0 shadow-2xl ring-0"
+    <aside
+      className="pointer-events-auto h-full"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      role="dialog"
+      role="complementary"
       aria-label="Element properties"
     >
-      <Tabs defaultValue="edit" className="gap-0">
-        {/* Header — tag chip · tabs · actions */}
-        <div className="flex items-center justify-between gap-2 border-b border-foreground/10 px-3 py-2">
-          <span className="inline-flex h-5 items-center rounded bg-[#C52B09] px-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-white">
-            {tag.toLowerCase()}
-          </span>
+      <Card
+        key={element ? domKey(element) : 'none'}
+        size="sm"
+        className="h-full gap-0 overflow-hidden rounded-none border-0 bg-card py-0 text-foreground shadow-none ring-0"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {elementName.role}
+            </p>
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {tag.toLowerCase()}
+              {elementName.preview ? ` · ${elementName.preview}` : ''}
+            </p>
+          </div>
 
-          <TabsList variant="line" className="h-7 gap-0 bg-transparent p-0">
-            <TabsTrigger
-              value="edit"
-              className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wider"
-            >
-              Edit
-            </TabsTrigger>
-            <TabsTrigger
-              value="layout"
-              className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wider"
-            >
-              Layout
-            </TabsTrigger>
-            <TabsTrigger
-              value="style"
-              className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wider"
-            >
-              Style
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex items-center gap-0.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Delete element"
-              onClick={onDelete}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Close"
-              onClick={onClose}
-              className="text-muted-foreground"
-            >
-              <X />
-            </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <EditorTooltip label="Delete element" side="top">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Delete element"
+                onClick={onDelete}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 />
+              </Button>
+            </EditorTooltip>
+            <EditorTooltip label="Close panel" side="top">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Close panel"
+                onClick={onClose}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X />
+              </Button>
+            </EditorTooltip>
           </div>
         </div>
 
-        {/* EDIT */}
-        <TabsContent value="edit" className="flex flex-col gap-4 px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <InspectorSection title="Position">
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-1">
+                <IconChip label="Align left">
+                  <AlignLeft className="size-3.5" />
+                </IconChip>
+                <IconChip label="Align center">
+                  <AlignCenter className="size-3.5" />
+                </IconChip>
+                <IconChip label="Align right">
+                  <AlignRight className="size-3.5" />
+                </IconChip>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Readout label="X" value={x} />
+                <Readout label="Y" value={y} />
+              </div>
+              <Readout label="Rotation" value="0deg" />
+            </div>
+          </InspectorSection>
+
+          <InspectorSection title="Layout">
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Readout label="W" value={`${width}px`} />
+                <Readout label="H" value={`${height}px`} />
+              </div>
+              <Section label="Margin">
+                <div className="grid grid-cols-2 gap-2">
+                  <SpacingInput
+                    placeholder="X axis"
+                    onCommit={(v) => {
+                      onSpacing('marginLeft', v)
+                      onSpacing('marginRight', v)
+                    }}
+                  />
+                  <SpacingInput
+                    placeholder="Y axis"
+                    onCommit={(v) => {
+                      onSpacing('marginTop', v)
+                      onSpacing('marginBottom', v)
+                    }}
+                  />
+                </div>
+              </Section>
+              <Section label="Padding">
+                <div className="grid grid-cols-2 gap-2">
+                  <SpacingInput
+                    placeholder="X axis"
+                    onCommit={(v) => {
+                      onSpacing('paddingLeft', v)
+                      onSpacing('paddingRight', v)
+                    }}
+                  />
+                  <SpacingInput
+                    placeholder="Y axis"
+                    onCommit={(v) => {
+                      onSpacing('paddingTop', v)
+                      onSpacing('paddingBottom', v)
+                    }}
+                  />
+                </div>
+              </Section>
+            </div>
+          </InspectorSection>
+
+          <InspectorSection title="Appearance">
+            <div className="grid grid-cols-2 gap-2">
+              <Readout label="Opacity" value={`${opacity}%`} />
+              <Readout label="Radius" value={styles?.borderRadius || '0'} />
+            </div>
+          </InspectorSection>
+
+          <InspectorSection title="Typography">
+            <div className="flex flex-col gap-4">
+              {isText ? (
+                <>
+                  <Section label="Text content">
+                    <Textarea
+                      defaultValue={element?.textContent ?? ''}
+                      onChange={(e) => onText(e.target.value)}
+                      rows={3}
+                      className="min-h-[72px] rounded-md text-sm"
+                      placeholder="Type text..."
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={onEditText}
+                      aria-pressed={editing}
+                      className="self-start rounded-md"
+                    >
+                      <Pencil className="size-3" />
+                      {editing ? 'Editing inline...' : 'Edit inline'}
+                    </Button>
+                  </Section>
+
+                  <Section label="Font family">
+                    <FontFamilySelect
+                      element={element}
+                      onChange={onFontFamily}
+                    />
+                  </Section>
+
+                  <Section label="Style">
+                    <SegmentedGroup>
+                      <SegmentButton label="Bold" onClick={onBold}>
+                        <Bold className="size-3.5" />
+                      </SegmentButton>
+                      <SegmentButton label="Italic" onClick={onItalic}>
+                        <Italic className="size-3.5" />
+                      </SegmentButton>
+                      <SegmentButton label="Underline" onClick={onUnderline}>
+                        <Underline className="size-3.5" />
+                      </SegmentButton>
+                    </SegmentedGroup>
+                  </Section>
+
+                  <Section label="Alignment">
+                    <SegmentedGroup>
+                      <SegmentButton label="Align left" onClick={() => onAlign('left')}>
+                        <AlignLeft className="size-3.5" />
+                      </SegmentButton>
+                      <SegmentButton label="Align center" onClick={() => onAlign('center')}>
+                        <AlignCenter className="size-3.5" />
+                      </SegmentButton>
+                      <SegmentButton label="Align right" onClick={() => onAlign('right')}>
+                        <AlignRight className="size-3.5" />
+                      </SegmentButton>
+                    </SegmentedGroup>
+                  </Section>
+                </>
+              ) : (
+                <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                  Text controls are not available for{' '}
+                  <span className="font-mono text-foreground">{tag.toLowerCase()}</span>.
+                </p>
+              )}
+            </div>
+          </InspectorSection>
+
+          {(isIcon || showImagePanel) && (
+            <InspectorSection title={isIcon ? 'Icon' : 'Image'}>
+              <div className="flex flex-col gap-4">
           {isIcon && iconHost && (
             <IconPanel host={iconHost.element} onIcon={onIcon} />
           )}
           {showImagePanel && effectiveImage && (
             <ImagePanel element={effectiveImage} onImage={onImage} />
           )}
-          {isText && (
-            <>
-              <Section label="Text content">
-                <Textarea
-                  defaultValue={element?.textContent ?? ''}
-                  onChange={(e) => onText(e.target.value)}
-                  rows={3}
-                  className="min-h-[72px] rounded-lg text-sm"
-                  placeholder="Type text…"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={onEditText}
-                  aria-pressed={editing}
-                  className="self-start"
-                >
-                  <Pencil className="size-3" />
-                  {editing ? 'Editing inline…' : 'Edit inline'}
-                </Button>
-              </Section>
-
-              <Section label="Style">
-                <SegmentedGroup>
-                  <SegmentButton label="Bold" onClick={onBold}>
-                    <Bold className="size-3.5" />
-                  </SegmentButton>
-                  <SegmentButton label="Italic" onClick={onItalic}>
-                    <Italic className="size-3.5" />
-                  </SegmentButton>
-                  <SegmentButton label="Underline" onClick={onUnderline}>
-                    <Underline className="size-3.5" />
-                  </SegmentButton>
-                </SegmentedGroup>
-              </Section>
-
-              <Section label="Alignment">
-                <SegmentedGroup>
-                  <SegmentButton label="Align left" onClick={() => onAlign('left')}>
-                    <AlignLeft className="size-3.5" />
-                  </SegmentButton>
-                  <SegmentButton label="Align center" onClick={() => onAlign('center')}>
-                    <AlignCenter className="size-3.5" />
-                  </SegmentButton>
-                  <SegmentButton label="Align right" onClick={() => onAlign('right')}>
-                    <AlignRight className="size-3.5" />
-                  </SegmentButton>
-                </SegmentedGroup>
-              </Section>
-            </>
-          )}
-          {!isText && !showImagePanel && !isIcon && (
-            <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
-              Text editing isn&apos;t available for{' '}
-              <span className="font-mono">{tag.toLowerCase()}</span> elements.
-              Try the <span className="font-medium text-foreground">Layout</span>{' '}
-              tab.
-            </p>
+              </div>
+            </InspectorSection>
           )}
 
-          {/* Unified color picker — renders once per toolbar.
-              Context determines what the color binds to:
-                • Icon selection → iconColor / iconBg (via onIcon)
-                • Text selection → CSS color (via onColor)
-              A Foreground/Background toggle appears only when the
-              context supports both (icons). For text the picker
-              simply binds to color. */}
           {(isText || isIcon) && (
-            <UnifiedColorPanel
-              brandTokens={brandTokens}
-              element={element}
-              isIcon={isIcon}
-              onColor={onColor}
-              onIcon={onIcon}
-            />
+            <InspectorSection title="Fill">
+              <UnifiedColorPanel
+                brandTokens={brandTokens}
+                element={element}
+                isIcon={isIcon}
+                onColor={onColor}
+                onIcon={onIcon}
+              />
+            </InspectorSection>
           )}
-        </TabsContent>
 
-        {/* LAYOUT */}
-        <TabsContent value="layout" className="flex flex-col gap-4 px-4 py-4">
-          <Section label="Margin">
-            <div className="grid grid-cols-2 gap-2">
-              <SpacingInput
-                placeholder="X axis"
-                onCommit={(v) => {
-                  onSpacing('marginLeft', v)
-                  onSpacing('marginRight', v)
-                }}
-              />
-              <SpacingInput
-                placeholder="Y axis"
-                onCommit={(v) => {
-                  onSpacing('marginTop', v)
-                  onSpacing('marginBottom', v)
-                }}
-              />
-            </div>
-          </Section>
+          <InspectorSection title="Stroke" collapsed />
+          <InspectorSection title="Effects" collapsed />
 
-          <Section label="Padding">
-            <div className="grid grid-cols-2 gap-2">
-              <SpacingInput
-                placeholder="X axis"
-                onCommit={(v) => {
-                  onSpacing('paddingLeft', v)
-                  onSpacing('paddingRight', v)
-                }}
-              />
-              <SpacingInput
-                placeholder="Y axis"
-                onCommit={(v) => {
-                  onSpacing('paddingTop', v)
-                  onSpacing('paddingBottom', v)
-                }}
-              />
-            </div>
-          </Section>
-
-          <Section label="Size">
-            <div className="grid grid-cols-2 gap-2">
-              <SpacingInput
-                placeholder="Width"
-                onCommit={(v) => onSpacing('width', v)}
-              />
-              <SpacingInput
-                placeholder="Height"
-                onCommit={(v) => onSpacing('height', v)}
-              />
-            </div>
-          </Section>
-        </TabsContent>
-
-        {/* STYLE */}
-        <TabsContent value="style" className="flex flex-col gap-4 px-4 py-4">
-          <Section label="Tailwind classes">
-            <code className="block max-h-24 overflow-auto rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/80">
+          <InspectorSection title="Code">
+            <Section label="Tailwind classes">
+              <code className="block max-h-24 overflow-auto rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/80">
               {element?.className?.toString().trim() || (
                 <span className="text-muted-foreground">No classes</span>
               )}
-            </code>
-          </Section>
+              </code>
+            </Section>
 
-          <Section label="Inline CSS">
-            <code className="block max-h-24 overflow-auto rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/80">
+            <Section label="Inline CSS">
+              <code className="block max-h-24 overflow-auto rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/80">
               {element?.style?.cssText?.trim() || (
                 <span className="text-muted-foreground">None</span>
               )}
-            </code>
-          </Section>
+              </code>
+            </Section>
 
-          <Section label="Element ID">
-            <Input
-              defaultValue={element?.id ?? ''}
-              onChange={(e) => {
-                if (element) element.id = e.target.value
-              }}
-              placeholder="element-id"
-              className="h-8 rounded-lg text-xs"
-            />
-          </Section>
-        </TabsContent>
-      </Tabs>
-    </Card>
+            <Section label="Element ID">
+              <Input
+                defaultValue={element?.id ?? ''}
+                onChange={(e) => {
+                  // eslint-disable-next-line react-hooks/immutability -- design mode intentionally edits the live preview DOM.
+                  if (element) element.id = e.target.value
+                }}
+                placeholder="element-id"
+                className="h-8 rounded-md text-xs"
+              />
+            </Section>
+          </InspectorSection>
+        </div>
+      </Card>
+    </aside>
+  )
+}
+
+function InspectorSection({
+  title,
+  children,
+  collapsed = false,
+}: {
+  title: string
+  children?: React.ReactNode
+  collapsed?: boolean
+}) {
+  return (
+    <section className="border-b border-border px-3 py-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {collapsed && (
+          <span className="text-xl leading-none text-muted-foreground" aria-hidden>
+            +
+          </span>
+        )}
+      </div>
+      {!collapsed && children && <div className="mt-3">{children}</div>}
+    </section>
+  )
+}
+
+function Readout({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex h-8 items-center gap-2 rounded-md border border-border bg-background px-2 text-xs">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="min-w-0 truncate font-mono text-foreground">{value}</span>
+    </div>
+  )
+}
+
+function FontFamilySelect({
+  element,
+  onChange,
+}: {
+  element: HTMLElement | null
+  onChange: (fontFamily: string) => void
+}) {
+  const { fonts: localFonts, loading: fontsLoading } = useLocalFonts()
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState('')
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const currentFamily = element?.style.fontFamily || ''
+  const currentTemplate = TEMPLATE_FONT_OPTIONS.find(
+    (o) => o.css === currentFamily,
+  )
+  const displayLabel = currentTemplate
+    ? currentTemplate.label
+    : currentFamily
+      ? currentFamily.replace(/^"(.*)".*$/, '$1')
+      : 'Inherit'
+
+  const lowerQuery = query.toLowerCase()
+  const filteredTemplate = TEMPLATE_FONT_OPTIONS.filter((o) =>
+    o.label.toLowerCase().includes(lowerQuery),
+  )
+  const filteredLocal = localFonts.filter((f) =>
+    f.toLowerCase().includes(lowerQuery),
+  )
+
+  const handleSelectTemplate = (option: (typeof TEMPLATE_FONT_OPTIONS)[number]) => {
+    onChange(option.css)
+    setOpen(false)
+    setQuery('')
+  }
+
+  const handleSelectLocal = (family: string) => {
+    onChange(`"${family}", system-ui, sans-serif`)
+    setOpen(false)
+    setQuery('')
+  }
+
+  React.useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
+  }, [open])
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'flex h-8 w-full items-center justify-between rounded-md border border-border bg-background px-2.5 text-xs transition hover:bg-muted',
+            open && 'ring-2 ring-ring',
+          )}
+          style={
+            currentFamily ? { fontFamily: currentFamily } : undefined
+          }
+        >
+          <span className="truncate">{displayLabel}</span>
+          <ChevronsUpDown className="ml-1 size-3 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[280px] rounded-xl p-0"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <Search className="size-3.5 shrink-0 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search fonts…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
+        <ScrollArea className="max-h-[320px]">
+          <div className="p-1">
+            {/* Template fonts group */}
+            {filteredTemplate.length > 0 && (
+              <>
+                <div className="px-2 pb-1 pt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Template
+                </div>
+                {filteredTemplate.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleSelectTemplate(option)}
+                    className={cn(
+                      'flex w-full items-center rounded-md px-2 py-1.5 text-xs transition hover:bg-muted',
+                      currentFamily === option.css && option.css !== '' && 'bg-muted font-medium',
+                      currentFamily === '' && option.value === '__inherit__' && 'bg-muted font-medium',
+                    )}
+                  >
+                    <span
+                      className="truncate"
+                      style={option.css ? { fontFamily: option.css } : undefined}
+                    >
+                      {option.label}
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Local / OS fonts group */}
+            {fontsLoading ? (
+              <div className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+                Detecting system fonts…
+              </div>
+            ) : filteredLocal.length > 0 ? (
+              <>
+                <div className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  System Fonts ({filteredLocal.length})
+                </div>
+                {filteredLocal.map((family) => {
+                  const cssVal = `"${family}", system-ui, sans-serif`
+                  return (
+                    <button
+                      key={family}
+                      type="button"
+                      onClick={() => handleSelectLocal(family)}
+                      className={cn(
+                        'flex w-full items-center rounded-md px-2 py-1.5 text-xs transition hover:bg-muted',
+                        currentFamily === cssVal && 'bg-muted font-medium',
+                      )}
+                    >
+                      <span className="truncate" style={{ fontFamily: `"${family}"` }}>
+                        {family}
+                      </span>
+                    </button>
+                  )
+                })}
+              </>
+            ) : query ? (
+              <div className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+                No fonts matching &ldquo;{query}&rdquo;
+              </div>
+            ) : null}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function IconChip({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <EditorTooltip label={label} side="top">
+      <button
+        type="button"
+        aria-label={label}
+        className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {children}
+      </button>
+    </EditorTooltip>
   )
 }
 
@@ -1019,7 +1360,7 @@ function Section({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-[11px] font-medium text-muted-foreground">
         {label}
       </span>
       {children}
@@ -1324,16 +1665,16 @@ function IconPanel({
               {results.map((entry) => {
                 const Icon = entry.Icon
                 return (
-                  <button
-                    key={entry.name}
-                    type="button"
-                    title={entry.label}
-                    aria-label={`Use ${entry.label} icon`}
-                    onClick={() => applyIcon(entry)}
-                    className="inline-flex size-8 items-center justify-center rounded-md text-foreground/80 transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Icon size={16} strokeWidth={1.75} />
-                  </button>
+                  <EditorTooltip key={entry.name} label={entry.label} side="top">
+                    <button
+                      type="button"
+                      aria-label={`Use ${entry.label} icon`}
+                      onClick={() => applyIcon(entry)}
+                      className="inline-flex size-8 items-center justify-center rounded-md text-foreground/80 transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Icon size={16} strokeWidth={1.75} />
+                    </button>
+                  </EditorTooltip>
                 )
               })}
             </div>
@@ -1489,7 +1830,7 @@ function IconHostPreview({
 
 function SegmentedGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex w-full items-center justify-between gap-1 rounded-lg border border-border bg-background p-1">
+    <div className="inline-flex w-full items-center justify-between gap-1 rounded-md border border-border bg-background p-1">
       {children}
     </div>
   )
@@ -1505,15 +1846,16 @@ function SegmentButton({
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className="inline-flex h-7 flex-1 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {children}
-    </button>
+    <EditorTooltip label={label} side="top">
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        className="inline-flex h-7 flex-1 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {children}
+      </button>
+    </EditorTooltip>
   )
 }
 
@@ -1542,7 +1884,7 @@ function SpacingInput({
         }
       }}
       placeholder={placeholder}
-      className="h-8 rounded-lg text-xs"
+      className="h-8 rounded-md text-xs"
     />
   )
 }

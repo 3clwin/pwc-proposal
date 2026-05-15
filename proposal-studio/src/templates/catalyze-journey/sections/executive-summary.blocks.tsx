@@ -231,7 +231,7 @@ function LeadershipGridRenderer({ block }: { block: LeadershipGridBlock }) {
         initial="hidden"
         whileInView="show"
         viewport={VIEWPORT_ONCE}
-        className="grid grid-cols-1 gap-10 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-10 @sm:grid-cols-2 sm:grid-cols-2"
       >
         {block.leaders.map((leader) => (
           <motion.div key={leader.id} variants={FADE_UP} className="flex gap-6">
@@ -297,7 +297,7 @@ function DifferentiatorBentoRenderer({
         initial="hidden"
         whileInView="show"
         viewport={VIEWPORT_ONCE}
-        className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-foreground/10 sm:grid-cols-2 lg:grid-cols-6"
+        className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-foreground/10 @sm:grid-cols-2 @lg:grid-cols-6 sm:grid-cols-2 lg:grid-cols-6"
       >
         {block.items.map((diff, i) => {
           const firstTile = i === 0
@@ -367,7 +367,7 @@ function FeeHeadlineRenderer({ block }: { block: FeeHeadlineBlock }) {
             editorial label + subcaption stack on the right. Gives the
             fee moment the presence it deserves without the dead white
             space that the old left-aligned, full-width version created. */}
-        <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-[1.2fr,1fr] md:gap-16">
+        <div className="grid grid-cols-1 items-center gap-10 @md:grid-cols-[1.2fr,1fr] @md:gap-16 md:grid-cols-[1.2fr,1fr] md:gap-16">
           <div className="flex flex-col gap-4">
             <span
               className="font-mono text-[12px] uppercase tracking-[0.28em]"

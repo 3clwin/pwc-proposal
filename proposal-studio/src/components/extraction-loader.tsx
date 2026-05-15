@@ -24,6 +24,8 @@ interface ExtractionLoaderProps {
   intervalMs?: number
   /** Override for the aria-live label prefix. */
   ariaPrefix?: string
+  /** Called once after the last step has been displayed for its full duration. */
+  onComplete?: () => void
 }
 
 export function ExtractionLoader({
@@ -31,16 +33,29 @@ export function ExtractionLoader({
   caption,
   intervalMs = 2400,
   ariaPrefix,
+  onComplete,
 }: ExtractionLoaderProps) {
   const [activeStep, setActiveStep] = useState(0)
   const reduce = useReducedMotion()
 
   useEffect(() => {
     const t = setInterval(() => {
-      setActiveStep((s) => (s + 1) % steps.length)
+      setActiveStep((s) => {
+        if (s >= steps.length - 1) {
+          clearInterval(t)
+          return s
+        }
+        return s + 1
+      })
     }, intervalMs)
     return () => clearInterval(t)
   }, [steps.length, intervalMs])
+
+  useEffect(() => {
+    if (activeStep < steps.length - 1) return
+    const t = setTimeout(() => onComplete?.(), intervalMs)
+    return () => clearTimeout(t)
+  }, [activeStep, steps.length, intervalMs, onComplete])
 
   const progress = ((activeStep + 1) / steps.length) * 100
   const currentLabel = steps[activeStep] ?? ''
