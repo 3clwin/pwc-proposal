@@ -9,6 +9,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isLanding = pathname === '/'
   const isEditor = pathname === '/editor'
   const isIntake = pathname === '/intake'
+  const isUnlock = pathname === '/unlock'
 
   if (isEditor) {
     return (
@@ -21,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  if (isIntake || isLanding) {
+  if (isIntake || isLanding || isUnlock) {
     return <>{children}</>
   }
 
