@@ -19,9 +19,8 @@ interface UnlockFormProps {
 /**
  * PwC-branded preview gate. Single-column card with proper UX hierarchy:
  *  - Brand mark + product label (visitor knows where they are)
- *  - Welcoming headline (not just "Password")
- *  - Context line (why this gate exists)
- *  - Labeled field (visible label, not placeholder-as-label)
+ *  - Clear headline
+ *  - Password field (sr-only label; placeholder for sighted users)
  *  - Clear primary CTA with explicit disabled state
  *  - Fine-print help link
  *
@@ -91,61 +90,47 @@ export function UnlockForm({ returnPath }: UnlockFormProps) {
           </span>
         </div>
 
-        {/* Headline block — welcomes the visitor and explains the gate.
-            Headline is conversational (not just "Password"); supporting
-            line explains why the wall exists so the visitor doesn't feel
-            stuck. */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           <h1
             id="unlock-heading"
             className="font-heading text-2xl font-medium leading-tight tracking-tight text-foreground"
           >
             Authentication Required
           </h1>
-          <p className="text-sm leading-relaxed text-foreground/70">
-            Proposal Studio is in private preview. Enter the password your
-            engagement team shared to continue.
-          </p>
-        </div>
 
-        {/* Field — visible label above input (not placeholder-as-label),
-            with a small inline hint about case-sensitivity. Error renders
-            directly below the field, linked via aria-describedby so screen
-            readers announce it when focus lands on the input. */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="password"
-            className="text-xs font-medium uppercase tracking-[0.12em] text-foreground/65"
-          >
-            Password
-          </label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Enter the shared password"
-            autoFocus
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              if (error) setError(null)
-            }}
-            disabled={submitting}
-            aria-invalid={!!error}
-            aria-describedby={error ? 'unlock-error' : undefined}
-            className="h-12 text-base"
-          />
-          {error && (
-            <p
-              id="unlock-error"
-              role="alert"
-              className="flex items-start gap-1.5 text-xs leading-relaxed text-[#E0301E]"
-            >
-              <span aria-hidden className="mt-[3px] inline-block size-1 shrink-0 rounded-full bg-[#E0301E]" />
-              {error}
-            </p>
-          )}
+          {/* Field — placeholder cues sighted users; sr-only label for AT. */}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password" className="sr-only">
+              Password
+            </label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Enter the shared password"
+              autoFocus
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (error) setError(null)
+              }}
+              disabled={submitting}
+              aria-invalid={!!error}
+              aria-describedby={error ? 'unlock-error' : undefined}
+              className="h-12 text-base"
+            />
+            {error && (
+              <p
+                id="unlock-error"
+                role="alert"
+                className="flex items-start gap-1.5 text-xs leading-relaxed text-[#E0301E]"
+              >
+                <span aria-hidden className="mt-[3px] inline-block size-1 shrink-0 rounded-full bg-[#E0301E]" />
+                {error}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Primary action — full-width, dark charcoal so it reads as PwC's
@@ -168,8 +153,7 @@ export function UnlockForm({ returnPath }: UnlockFormProps) {
             zone a clean closure. */}
         <div className="flex flex-col gap-3 border-t border-foreground/8 pt-4">
           <p className="text-[11px] leading-relaxed text-foreground/55">
-            Don&rsquo;t have a password? Reach out to your PwC engagement lead
-            to request access to the preview.
+            Don&rsquo;t have the password? Reach out to the owner for access.
           </p>
         </div>
       </form>
