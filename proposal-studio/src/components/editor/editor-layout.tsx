@@ -18,6 +18,7 @@ import { EditorTooltip } from './editor-tooltip'
 import { RiskModal } from '@/components/editor/risk-modal'
 import { DeploySuccessModal } from '@/components/editor/deploy-success-modal'
 import { SiteRenderer } from '@/components/generated-site/site-renderer'
+import { ApiKeyRequiredDialog } from '@/components/api-key-required-dialog'
 import { useProject } from '@/context/project-context'
 import { useLLM } from '@/context/llm-context'
 import { LILLY_SITE_CONTENT } from '@/data/lilly-proposal'
@@ -47,6 +48,7 @@ export function EditorLayout() {
   const [showRiskModal, setShowRiskModal] = useState(false)
   const [deploying, setDeploying] = useState(false)
   const [successModalOpen, setSuccessModalOpen] = useState(false)
+  const [showApiKeyGate, setShowApiKeyGate] = useState(false)
   const deployInFlight = useRef(false)
 
   const deployedUrl = project.deploymentUrl
@@ -258,6 +260,11 @@ export function EditorLayout() {
         const data = await res.json() as {
           site?: typeof siteContent
           error?: string
+        }
+
+        if (res.status === 402 || data.error === 'api-key-required') {
+          setShowApiKeyGate(true)
+          return
         }
 
         if (!res.ok || !data.site) {
@@ -579,6 +586,13 @@ export function EditorLayout() {
         onResolve={handleResolveFlag}
         onDeploy={executeDeploy}
         deploying={deploying}
+      />
+
+      {/* API-key gate — surfaced when /api/generate-site returns 402 */}
+      <ApiKeyRequiredDialog
+        open={showApiKeyGate}
+        onOpenChange={setShowApiKeyGate}
+        returnPath="/editor"
       />
 
       {deployedUrl && (

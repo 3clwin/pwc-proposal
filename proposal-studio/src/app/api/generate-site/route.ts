@@ -139,9 +139,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ site: LILLY_SITE_CONTENT, source: 'llm' })
     }
 
+    // Mirror the OnboardingWizard's just-in-time gate. The fallback path below
+    // still exists for unexpected LLM failures, but a missing provider key
+    // should never silently produce a generic proposal — surface it.
     if (!llm) {
-      const site = adaptSiteContentToJourney(buildFallbackSite(body.tokens, body.theme), body.tokens)
-      return NextResponse.json({ site, source: 'fallback' })
+      return NextResponse.json(
+        {
+          error: 'api-key-required',
+          message:
+            'A verified provider key is required to generate a proposal for a new client. Configure one in Settings.',
+        },
+        { status: 402 }
+      )
     }
 
     try {

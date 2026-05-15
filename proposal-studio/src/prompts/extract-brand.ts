@@ -56,7 +56,7 @@ export function generateThemesFromBrandPrompt(
   headlineFont: string,
   bodyFont: string
 ): string {
-  return `You are a design system expert. Generate exactly 4 theme variants for a proposal microsite.
+  return `You are a senior brand designer generating 4 distinct visual directions for a proposal microsite. Each direction is a complete design system — not a color swap of the others.
 
 Brand:
 - Client: ${clientSlug}
@@ -65,12 +65,27 @@ Brand:
 - Headline font: ${headlineFont}
 - Body font: ${bodyFont}
 
-Generate 4 distinct visual directions. Return ONLY valid JSON array with no markdown fences:
+DESIGN DISCIPLINE — apply to every theme:
+- Commit to ONE aesthetic vision per theme. Refined minimalism, editorial maximalism, brutalist utility, warm hospitality — pick a real direction and execute it precisely.
+- Avoid AI-generic defaults: no generic Inter-and-purple-gradient combos, no "modern + clean + minimal" labels that say nothing.
+- The four themes should feel like four different design studios pitching the same client — same brand, four genuinely different points of view.
+
+The four required directions (do not deviate from these archetypes):
+1. EDITORIAL — long-form magazine feel. typeScale "editorial", layoutDensity "spacious", accentUsage "minimal", colorWeight "light". Hero is centered text on white/cream, navStyle "minimal".
+2. CORPORATE — confident institutional weight. typeScale "corporate", layoutDensity "balanced", accentUsage "moderate", colorWeight "dark". Hero is full-bleed brand color, navStyle "bold".
+3. MODERN — energetic, contemporary product feel. typeScale "modern", layoutDensity "balanced", accentUsage "bold", colorWeight "medium". Hero is split-layout or gradient-overlay, navStyle "rounded".
+4. WARM — approachable, partnership-forward. typeScale "classic", layoutDensity "spacious", accentUsage "moderate", colorWeight "light". Hero is centered-text with a single brand accent rule, navStyle "minimal".
+
+For each theme:
+- Label is 1-2 words, specific to the aesthetic (e.g. "Editorial Quarterly", "Confident Pitch", "Working Brief", "Familiar Hand"). Never use the literal archetype name.
+- Description is one sentence naming the FEEL and who it's for. Not "a clean modern design". Bad: "A clean modern theme." Good: "Press-release confidence for buyers who measure proposals against board memos."
+
+Return ONLY valid JSON array with no markdown fences:
 [
   {
     "id": "theme-1",
-    "label": "Theme name",
-    "description": "One-sentence description of the visual direction",
+    "label": "Specific 1-2 word name",
+    "description": "One-sentence description naming the feel and the buyer it speaks to",
     "colorWeight": "light|medium|bold|dark",
     "layoutDensity": "spacious|balanced|compact",
     "typeScale": "editorial|corporate|modern|classic",
@@ -81,7 +96,5 @@ Generate 4 distinct visual directions. Return ONLY valid JSON array with no mark
       "navStyle": "minimal|bold|rounded"
     }
   }
-]
-
-Make each theme genuinely different in feel — one corporate and restrained, one bold and modern, one editorial and elegant, one warm and approachable.`
+]`
 }

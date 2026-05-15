@@ -11,10 +11,24 @@ import { Logo } from '@/components/logo'
 import { IntakeFields, type ClientMode } from '@/components/intake-fields'
 import { FileUpload } from '@/components/file-upload'
 import { TemplatePicker } from '@/components/template-picker'
+import { ApiKeyRequiredDialog } from '@/components/api-key-required-dialog'
 import { useProject } from '@/context/project-context'
 import { useSavedClients } from '@/hooks/use-saved-clients'
+import { useLLM } from '@/context/llm-context'
 import { Progress } from '@/components/ui/progress'
 import type { UploadedFile } from '@/types'
+
+/**
+ * Server-side bypass: the Lilly demo runs without a provider key so reviewers
+ * can see the canned proposal. Keep this in sync with `isLillyClient` in
+ * `/api/extract-brand` and the slug check in `/api/generate-site`.
+ */
+function isLillyClient(clientName: string, clientUrl: string): boolean {
+  return (
+    clientName.toLowerCase().includes('lilly') ||
+    clientUrl.toLowerCase().includes('lilly.com')
+  )
+}
 
 function toSlug(name: string): string {
   return name
@@ -72,6 +86,7 @@ export function OnboardingWizard() {
   const router = useRouter()
   const { dispatch } = useProject()
   const { clients: savedClients, saveClient } = useSavedClients()
+  const { isConfigured } = useLLM()
 
   const [step, setStep] = useState(0)
   const [fields, setFields] = useState<ClientFields>(EMPTY_FIELDS)
@@ -80,6 +95,7 @@ export function OnboardingWizard() {
   const [submitting, setSubmitting] = useState(false)
   const [clientMode, setClientMode] = useState<ClientMode>('new')
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [showApiKeyGate, setShowApiKeyGate] = useState(false)
 
   const handleFilesChange = useCallback((newFiles: UploadedFile[]) => {
     setFiles(newFiles)
@@ -144,10 +160,18 @@ export function OnboardingWizard() {
   }
 
   async function handleSubmit() {
+    const normalizedUrl = `https://www.${fields.clientUrl.replace(/^(https?:\/\/)?(www\.)?/, '')}`
+
+    // Just-in-time API-key gate. Any non-demo client routes through the LLM
+    // pipeline (crawl + extract-brand + generate-site), so block before kickoff
+    // if no provider is verified. Lilly bypasses — server routes mirror this.
+    if (!isLillyClient(fields.clientName, normalizedUrl) && !isConfigured) {
+      setShowApiKeyGate(true)
+      return
+    }
+
     setSubmitting(true)
     try {
-      const normalizedUrl = `https://www.${fields.clientUrl.replace(/^(https?:\/\/)?(www\.)?/, '')}`
-
       let parsedFiles = files
       if (files.length > 0) {
         try {
@@ -362,6 +386,12 @@ export function OnboardingWizard() {
           </Button>
         </div>
       </div>
+
+      <ApiKeyRequiredDialog
+        open={showApiKeyGate}
+        onOpenChange={setShowApiKeyGate}
+        returnPath="/intake"
+      />
     </div>
   )
 }

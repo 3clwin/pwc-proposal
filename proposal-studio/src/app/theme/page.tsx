@@ -9,6 +9,7 @@ import { ThemeGrid } from '@/components/theme-grid'
 import { DesignSystemView } from '@/components/design-system-view'
 import { ExtractionLoader } from '@/components/extraction-loader'
 import { ProposalCanvas } from '@/components/proposal-canvas'
+import { ApiKeyRequiredDialog } from '@/components/api-key-required-dialog'
 import { useProject } from '@/context/project-context'
 import { useLLM } from '@/context/llm-context'
 import { getAvailableTemplates } from '@/templates'
@@ -23,6 +24,7 @@ export default function ThemePage() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeVariant | null>(null)
   const [loading, setLoading] = useState(true)
   const [building, setBuilding] = useState(false)
+  const [showApiKeyGate, setShowApiKeyGate] = useState(false)
   const fetchDone = useRef(false)
   const animDone = useRef(false)
   const didStartExtraction = useRef(false)
@@ -101,6 +103,11 @@ export default function ThemePage() {
           error?: string
         }
 
+        if (res.status === 402 || data.error === 'api-key-required') {
+          setShowApiKeyGate(true)
+          return
+        }
+
         if (!res.ok) {
           return
         }
@@ -143,11 +150,18 @@ export default function ThemePage() {
 
   if (loading) {
     return (
-      <ExtractionLoader
-        caption={project.clientUrl || 'client website'}
-        ariaPrefix="Brand extraction"
-        onComplete={handleLoaderComplete}
-      />
+      <>
+        <ExtractionLoader
+          caption={project.clientUrl || 'client website'}
+          ariaPrefix="Brand extraction"
+          onComplete={handleLoaderComplete}
+        />
+        <ApiKeyRequiredDialog
+          open={showApiKeyGate}
+          onOpenChange={setShowApiKeyGate}
+          returnPath="/theme"
+        />
+      </>
     )
   }
 
@@ -224,6 +238,12 @@ export default function ThemePage() {
           </Button>
         </div>
       </div>
+
+      <ApiKeyRequiredDialog
+        open={showApiKeyGate}
+        onOpenChange={setShowApiKeyGate}
+        returnPath="/theme"
+      />
     </div>
   )
 }

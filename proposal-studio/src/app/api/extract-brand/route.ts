@@ -242,6 +242,20 @@ export async function POST(request: Request) {
       })
     }
 
+    // Server-side mirror of the OnboardingWizard's API-key gate. The fallback
+    // path below produces a simulated palette that's unrelated to the client's
+    // real brand, which silently masks the misconfiguration. Surface it instead.
+    if (!llm) {
+      return NextResponse.json(
+        {
+          error: 'api-key-required',
+          message:
+            'A verified provider key is required to crawl and analyze a new client. Configure one in Settings.',
+        },
+        { status: 402 }
+      )
+    }
+
     let crawl: CrawledDesignSystem | null = null
     const crawlWarnings: string[] = []
     try {
@@ -253,16 +267,6 @@ export async function POST(request: Request) {
 
     const fallbackTokens = generateSimulatedBrandTokens(body.clientSlug, body.clientUrl)
     const crawledTokens = mergeCrawlerWithFallback(fallbackTokens, crawl)
-
-    if (!llm) {
-      const themes = withJourneyTheme(generateDefaultThemeVariants(crawledTokens), crawledTokens)
-      return NextResponse.json({
-        tokens: crawledTokens,
-        themes,
-        source: crawl ? 'playwright' : 'simulated',
-        crawlWarnings,
-      })
-    }
 
     try {
       const brandPrompt = `${extractBrandPrompt(
