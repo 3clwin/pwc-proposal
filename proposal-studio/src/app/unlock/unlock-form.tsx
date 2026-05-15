@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { PwcLogo } from '@/components/pwc-logo'
+import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -49,18 +49,27 @@ export function UnlockForm({ returnPath }: UnlockFormProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FAFAF8] px-4">
-      <div className="flex w-full max-w-[360px] flex-col items-center gap-6">
-        <PwcLogo className="h-12 w-auto" />
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-full max-w-[400px] flex-col items-center gap-6 rounded-2xl border border-foreground/8 bg-white px-8 py-10 shadow-[0_8px_32px_-16px_rgba(0,0,0,0.12)]"
+      >
+        <Logo className="h-10 w-auto text-foreground" />
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex w-full flex-col gap-4 rounded-2xl border border-foreground/8 bg-white p-6 shadow-[0_8px_32px_-16px_rgba(0,0,0,0.12)]"
-        >
+        <div className="flex flex-col items-center gap-1 text-center">
+          <h1 className="text-xl font-medium tracking-tight text-foreground">
+            Password
+          </h1>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Ask the owner for the password.
+          </p>
+        </div>
+
+        <div className="flex w-full flex-col gap-3">
           <Input
             id="password"
             name="password"
             type="password"
-            placeholder="Password"
+            placeholder="Enter password"
             autoFocus
             autoComplete="current-password"
             value={password}
@@ -90,8 +99,8 @@ export function UnlockForm({ returnPath }: UnlockFormProps) {
             )}
             Continue
           </Button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   )
 }
